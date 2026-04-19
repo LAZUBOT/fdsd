@@ -9,9 +9,11 @@ window.exportToExcel = function() {
   });
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  link.href = url;
   link.download = `EL_Performance_${selectedGov}_${new Date().toISOString().split('T')[0]}.csv`;
   link.click();
+  URL.revokeObjectURL(url);
 };
 
 window.exportChartAsImage = async function(elementId) {
@@ -57,8 +59,10 @@ window.exportProvinceData = function(fileNum) {
   const csv = `Province,Count\n${rows.join('\n')}\n`;
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  link.href = url;
   link.download = `EL_Province_Data_${fileNum}_${new Date().toISOString().split('T')[0]}.csv`;
   link.click();
+  URL.revokeObjectURL(url);
   window.showToast('Province data exported');
 };

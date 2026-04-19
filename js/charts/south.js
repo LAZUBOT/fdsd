@@ -1,6 +1,13 @@
 window.updateSouthConfigChart = function() {
   const state = window.appState['1'];
-  if (!state.rows.length || state.zoneIdx === -1) return;
+  if (!state.rows.length || state.zoneIdx === -1) {
+    document.getElementById('rowCount5').textContent = '0';
+    if (window.appState['5'].chart) {
+      window.appState['5'].chart.destroy();
+      window.appState['5'].chart = null;
+    }
+    return;
+  }
 
   const southCodes = ['FTK', 'FBS', 'FNS', 'FMU', 'FAM'];
   const southNames = { FTK: 'Salah aldin', FBS: 'Basrah', FNS: 'Thy Qar', FMU: 'Muthanna', FAM: 'Misan' };

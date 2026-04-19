@@ -1,3 +1,13 @@
+window._rafJobs = {}
+
+window.scheduleUpdate = function(key, fn) {
+  if (window._rafJobs[key]) cancelAnimationFrame(window._rafJobs[key]);
+  window._rafJobs[key] = requestAnimationFrame(() => {
+    fn();
+    delete window._rafJobs[key];
+  });
+};
+
 window.showToast = function(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -17,9 +27,9 @@ window.switchTab = function(tabId) {
       btn.classList.add('text-slate-500');
     }
   });
-  if (tabId === 'tab3') window.updateComparisonChart();
-  if (tabId === 'tab4') window.updateZoneContractorAnalysis();
-  if (tabId === 'tab5') window.updateSouthConfigChart();
+  if (tabId === 'tab3') window.scheduleUpdate('cmp-tab', window.updateComparisonChart);
+  if (tabId === 'tab4') window.scheduleUpdate('contractor-tab', window.updateZoneContractorAnalysis);
+  if (tabId === 'tab5') window.scheduleUpdate('south-tab', window.updateSouthConfigChart);
 };
 
 window.populateFilters = function(fileNum) {
@@ -42,15 +52,15 @@ window.applyFilter = function(fileNum) {
 
   const val = select.value || 'all';
   const filtered = val === 'all' ? state.rows : state.rows.filter(r => r[state.govIdx] === val);
-  window.renderSingleChart(fileNum, filtered);
+  window.scheduleUpdate(`single-${fileNum}`, () => window.renderSingleChart(fileNum, filtered));
 
   if (fileNum === '1') {
-    window.updateSouthConfigChart();
-    window.updateComparisonChart();
+    window.scheduleUpdate('south-filter', window.updateSouthConfigChart);
+    window.scheduleUpdate('cmp-filter-1', window.updateComparisonChart);
   }
   if (fileNum === '2') {
-    window.updateComparisonChart();
-    window.updateZoneContractorAnalysis();
+    window.scheduleUpdate('cmp-filter-2', window.updateComparisonChart);
+    window.scheduleUpdate('contractor-filter-2', window.updateZoneContractorAnalysis);
   }
 };
 

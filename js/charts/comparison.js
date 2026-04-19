@@ -3,6 +3,20 @@ window.updateComparisonChart = function() {
   const labels = [...new Set(Object.values(window.govMapping))];
   const d1 = {}, d2 = {};
 
+  if (!window.appState['1'].rows.length && !window.appState['2'].rows.length) {
+    const newTotalEl = document.getElementById('cmpNewTotal');
+    const pendingTotalEl = document.getElementById('cmpPendingTotal');
+    const combinedTotalEl = document.getElementById('cmpCombinedTotal');
+    if (newTotalEl) newTotalEl.textContent = '0';
+    if (pendingTotalEl) pendingTotalEl.textContent = '0';
+    if (combinedTotalEl) combinedTotalEl.textContent = '0';
+    if (window.appState.comparisonChart) {
+      window.appState.comparisonChart.destroy();
+      window.appState.comparisonChart = null;
+    }
+    return;
+  }
+
   window.appState['1'].rows.forEach(r => { const g = r[window.appState['1'].govIdx]; d1[g] = (d1[g] || 0) + 1; });
   window.appState['2'].rows.forEach(r => { const g = r[window.appState['2'].govIdx]; d2[g] = (d2[g] || 0) + 1; });
 
