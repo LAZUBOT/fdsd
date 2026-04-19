@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EL Data Analyzer Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="min-h-screen pb-12">
+
+    <div id="toast">Message</div>
+
+    <nav class="glass-nav sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-200">EL</div>
+                    <div class="flex flex-col">
+                        <span class="text-lg font-extrabold tracking-tight text-slate-900 leading-none">Data Analyzer</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Operational Intel v2.1</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-4 overflow-x-auto w-full md:w-auto px-2 pb-1">
+                    <button onclick="switchTab('tab1')" id="btn-tab1" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold tab-active">New Users</button>
+                    <button onclick="switchTab('tab2')" id="btn-tab2" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Pending Installs</button>
+                    <button onclick="switchTab('tab5')" id="btn-tab5" class="tab-btn px-4 py-2 text-sm text-teal-600 whitespace-nowrap font-bold">South & SD Gov</button>
+                    <button onclick="switchTab('tab3')" id="btn-tab3" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Market Share</button>
+                    <button onclick="switchTab('tab4')" id="btn-tab4" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Contractor Drill-down</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 mt-8">
+        <div id="tab1" class="tab-content transition-opacity duration-300">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4">Input Data</h3>
+                        <div class="relative group">
+                            <input type="file" id="fileInput1" onchange="handleFileUpload(event, '1')" accept=".csv" class="hidden" />
+                            <label for="fileInput1" class="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all">
+                                <svg class="w-8 h-8 text-blue-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                <span class="text-sm font-bold text-slate-600">Upload CSV</span>
+                            </label>
+                        </div>
+                        <div id="filterArea1" class="hidden mt-6 space-y-4">
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Filter Province</label>
+                            <select id="govFilter1" onchange="applyFilter('1')" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"></select>
+                            <div class="pt-4 border-t border-slate-100">
+                                <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-2xl text-white shadow-xl shadow-blue-100">
+                                    <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">Live Count</p>
+                                    <p id="rowCount1" class="text-4xl font-black mt-1">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 bg-white p-8 rounded-3xl border border-slate-200 card-shadow chart-container">
+                    <canvas id="canvas1"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab2" class="tab-content hidden transition-opacity duration-300">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4">Input Data</h3>
+                        <div class="relative group">
+                            <input type="file" id="fileInput2" onchange="handleFileUpload(event, '2')" accept=".csv" class="hidden" />
+                            <label for="fileInput2" class="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all">
+                                <svg class="w-8 h-8 text-purple-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                <span class="text-sm font-bold text-slate-600">Upload CSV</span>
+                            </label>
+                        </div>
+                        <div id="filterArea2" class="hidden mt-6 space-y-4">
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Filter Province</label>
+                            <select id="govFilter2" onchange="applyFilter('2')" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"></select>
+                            <div class="pt-4 border-t border-slate-100">
+                                <div class="bg-gradient-to-br from-purple-600 to-purple-700 p-6 rounded-2xl text-white shadow-xl shadow-purple-100">
+                                    <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">Pending Count</p>
+                                    <p id="rowCount2" class="text-4xl font-black mt-1">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 bg-white p-8 rounded-3xl border border-slate-200 card-shadow chart-container">
+                    <canvas id="canvas2"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab5" class="tab-content hidden transition-opacity duration-300">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 text-teal-600">Infrastructure Config</h3>
+                        <p class="text-xs text-slate-400 mb-4 font-medium">Automatic classification for FTK, FBS, FNS, FMU, FAM sites.</p>
+                        <div class="pt-4 border-t border-slate-100">
+                            <div class="bg-south p-6 rounded-2xl text-white shadow-xl shadow-teal-100">
+                                <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">South Region Focus</p>
+                                <p id="rowCount5" class="text-4xl font-black mt-1">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 bg-white p-8 rounded-3xl border border-slate-200 card-shadow chart-container">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-black text-slate-800">South Configuration Distribution</h3>
+                        <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-[10px] font-black uppercase">Live Analysis</span>
+                    </div>
+                    <canvas id="canvas5"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab3" class="tab-content hidden transition-opacity duration-300">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 card-shadow">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Market Comparison</h3>
+                        <p class="text-slate-500 font-medium">Correlation between New Users and Pending Physical Installations</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <select id="sortComparison" onchange="updateComparisonChart()" class="p-3 border border-slate-200 rounded-2xl text-sm font-bold bg-slate-50 outline-none">
+                            <option value="desc">Sort: High to Low</option>
+                            <option value="asc">Sort: Low to High</option>
+                        </select>
+                        <button onclick="exportChartAsImage('chartExportArea')" class="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">Export PNG</button>
+                    </div>
+                </div>
+                <div id="chartExportArea" class="bg-white rounded-3xl p-8 h-[650px] w-full">
+                    <canvas id="canvasComparison"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab4" class="tab-content hidden transition-opacity duration-300">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 card-shadow">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Contractor Performance Matrix</h3>
+                        <p class="text-slate-500 font-medium">Granular analysis of operations per province</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="exportToExcel()" class="px-6 py-3 bg-emerald-600 text-white rounded-2xl font-black text-sm">Excel Report</button>
+                        <button onclick="exportChartAsImage('zoneExportArea')" class="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm">Save Graphic</button>
+                    </div>
+                </div>
+
+                <div class="mb-10 p-6 bg-slate-50 rounded-3xl border border-slate-100 flex items-center gap-6">
+                    <div class="w-full max-w-sm">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Focus Province</label>
+                        <select id="zoneGovFilter" onchange="updateZoneContractorAnalysis()" class="w-full p-4 border border-slate-200 rounded-2xl bg-white font-black text-slate-700"></select>
+                    </div>
+                    <div class="hidden md:flex flex-1 justify-end gap-12 px-8">
+                        <div class="text-center"><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Coverage</p><p id="statTotal" class="text-2xl font-black text-slate-900">0</p></div>
+                        <div class="text-center"><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Contractors</p><p id="statContractors" class="text-2xl font-black text-slate-900">0</p></div>
+                    </div>
+                </div>
+
+                <div id="zoneExportArea" class="bg-white space-y-12">
+                    <div class="h-[400px] w-full"><canvas id="canvasZoneChart"></canvas></div>
+                    <div class="overflow-hidden border border-slate-100 rounded-[2rem] shadow-sm">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead class="bg-slate-900 text-white font-bold">
+                                    <tr>
+                                        <th class="px-8 py-6 uppercase tracking-wider text-[11px]">Region & Contractor</th>
+                                        <th class="px-6 py-6 text-center uppercase tracking-wider text-[11px]">New Users</th>
+                                        <th class="px-6 py-6 text-center uppercase tracking-wider text-[11px]">Pending</th>
+                                        <th class="px-8 py-6 text-center uppercase tracking-wider text-[11px] bg-blue-600">Total Intel</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="zoneTableBody" class="divide-y divide-slate-100 bg-white">
+                                    <tr><td colspan="4" class="p-20 text-center text-slate-400 italic font-medium">Awaiting data upload...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/state.js"></script>
+    <script src="js/csv.js"></script>
+    <script src="js/charts/single.js"></script>
+    <script src="js/charts/south.js"></script>
+    <script src="js/charts/comparison.js"></script>
+    <script src="js/charts/contractor.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
