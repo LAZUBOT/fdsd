@@ -61,3 +61,12 @@ body {
 .chart-container { position: relative; width: 100%; height: 500px; }
 
 .bg-south { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
+
+
+@media (max-width: 640px) {
+  .chart-container { height: 360px; }
+  #chartExportArea { height: 520px !important; padding: 1rem !important; }
+  #zoneExportArea .h-[400px] { height: 300px !important; }
+  .tab-btn { font-size: 12px; padding: 8px 10px; }
+  #toast { min-width: 220px; bottom: 20px; }
+}

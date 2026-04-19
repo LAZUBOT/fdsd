@@ -36,3 +36,29 @@ window.exportChartAsImage = async function(elementId) {
     window.showToast('Export Error');
   }
 };
+
+
+window.exportProvinceData = function(fileNum) {
+  const state = window.appState[fileNum];
+  if (!state || !state.rows.length || state.govIdx === -1) {
+    return window.showToast('No data available for province export');
+  }
+
+  const counts = {};
+  state.rows.forEach(r => {
+    const province = r[state.govIdx] || 'Other';
+    counts[province] = (counts[province] || 0) + 1;
+  });
+
+  const rows = Object.keys(counts)
+    .sort((a, b) => counts[b] - counts[a])
+    .map(p => `"${p}",${counts[p]}`);
+
+  const csv = `Province,Count\n${rows.join('\n')}\n`;
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `EL_Province_Data_${fileNum}_${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  window.showToast('Province data exported');
+};
