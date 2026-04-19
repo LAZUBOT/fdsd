@@ -35,7 +35,13 @@ window.populateFilters = function(fileNum) {
 
 window.applyFilter = function(fileNum) {
   const state = window.appState[fileNum];
-  const val = document.getElementById(`govFilter${fileNum}`).value;
+  const select = document.getElementById(`govFilter${fileNum}`);
+  if (!select) return;
+
+  const val = select.value || 'all';
   const filtered = val === 'all' ? state.rows : state.rows.filter(r => r[state.govIdx] === val);
   window.renderSingleChart(fileNum, filtered);
+
+  if (fileNum === '1') window.updateSouthConfigChart();
+  if (fileNum === '2') window.updateComparisonChart();
 };
