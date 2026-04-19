@@ -30,6 +30,7 @@
                     <button onclick="switchTab('tab5')" id="btn-tab5" class="tab-btn px-4 py-2 text-sm text-teal-600 whitespace-nowrap font-bold">South & SD Gov</button>
                     <button onclick="switchTab('tab3')" id="btn-tab3" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Market Share</button>
                     <button onclick="switchTab('tab4')" id="btn-tab4" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Contractor Drill-down</button>
+                    <button onclick="resetAllData()" class="ml-auto md:ml-2 px-4 py-2 text-xs bg-slate-100 text-slate-700 rounded-xl font-black whitespace-nowrap hover:bg-slate-200">Reset Data</button>
                 </div>
             </div>
         </div>
@@ -158,6 +159,11 @@
                     <div class="w-full max-w-sm">
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Focus Province</label>
                         <select id="zoneGovFilter" onchange="updateZoneContractorAnalysis()" class="w-full p-4 border border-slate-200 rounded-2xl bg-white font-black text-slate-700"></select>
+                    </div>
+
+                    <div class="w-full max-w-sm">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Search Contractor</label>
+                        <input id="contractorSearch" oninput="updateZoneContractorAnalysis()" placeholder="Type contractor name..." class="w-full p-4 border border-slate-200 rounded-2xl bg-white font-semibold text-slate-700" />
                     </div>
                     <div class="hidden md:flex flex-1 justify-end gap-12 px-8">
                         <div class="text-center"><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Coverage</p><p id="statTotal" class="text-2xl font-black text-slate-900">0</p></div>

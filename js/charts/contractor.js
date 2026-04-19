@@ -8,6 +8,7 @@ window.updateZoneContractorAnalysis = function() {
   if (!tbody || !filterEl || !totalEl || !contractorEl || !chartEl) return;
 
   const selectedGov = filterEl.value || 'all';
+  const search = (document.getElementById('contractorSearch')?.value || '').trim().toLowerCase();
   tbody.innerHTML = '';
 
   const state1 = window.appState['1'];
@@ -34,6 +35,7 @@ window.updateZoneContractorAnalysis = function() {
       if (province === 'Other') return;
 
       const contractor = (r[state.contractorIdx] || 'Non-Contracted').trim() || 'Non-Contracted';
+      if (search && !contractor.toLowerCase().includes(search)) return;
       if (!masterMap[province]) masterMap[province] = {};
       if (!masterMap[province][contractor]) masterMap[province][contractor] = { new: 0, pending: 0 };
       masterMap[province][contractor][type] += 1;

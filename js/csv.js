@@ -83,11 +83,13 @@ window.handleFileUpload = function(event, fileNum) {
     state.statusIdx = schema.statusIdx;
     state.govIdx = headers.length;
 
-    state.rows = lines.slice(1).map(line => {
+    const initialRows = lines.slice(1).map(line => {
       const row = window.parseCSVLine(line);
       const mappedGov = window.mapProvinceFromZone(row[state.zoneIdx] || '');
       return [...row, mappedGov];
     });
+
+    state.rows = initialRows;
 
     if (fileNum === '2' && state.statusIdx !== -1) {
       state.rows = state.rows.filter(r => window.normalizeStatus(r[state.statusIdx]) === 'pending physical installation');
@@ -95,7 +97,7 @@ window.handleFileUpload = function(event, fileNum) {
 
     window.populateFilters(fileNum);
     window.applyFilter(fileNum);
-    window.showToast(`Success: Dataset ${fileNum} integrated`);
+    window.showToast(`Success: Dataset ${fileNum} integrated (${state.rows.length}/${initialRows.length} rows)`);
     if (fileNum === '1') window.updateSouthConfigChart();
   };
   reader.readAsText(file);

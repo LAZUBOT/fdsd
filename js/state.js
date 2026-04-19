@@ -6,6 +6,7 @@ window.govMapping = {
 };
 
 window.appState = {
+  ui: { contractorSearch: '' },
   "1": { rows: [], headers: [], chart: null, govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 },
   "2": { rows: [], headers: [], chart: null, govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 },
   "5": { chart: null },
