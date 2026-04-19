@@ -3,6 +3,7 @@ window.updateSouthConfigChart = function() {
   if (!state.rows.length || state.zoneIdx === -1) return;
 
   const southCodes = ['FTK', 'FBS', 'FNS', 'FMU', 'FAM'];
+  const southNames = { FTK: 'Salah aldin', FBS: 'Basrah', FNS: 'Thy Qar', FMU: 'Muthanna', FAM: 'Misan' };
   const counts = { FTK: 0, FBS: 0, FNS: 0, FMU: 0, FAM: 0, Other: 0 };
   let totalSouth = 0;
 
@@ -40,7 +41,7 @@ window.updateSouthConfigChart = function() {
   window.appState['5'].chart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: sortedCodes,
+      labels: sortedCodes.map(c => `${c}: ${southNames[c]}`),
       datasets: [{
         data: sortedCodes.map(c => counts[c]),
         backgroundColor: sortedCodes.map(c => palette[c] || '#0d9488'),
