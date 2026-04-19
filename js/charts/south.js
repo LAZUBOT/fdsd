@@ -53,7 +53,7 @@ window.updateSouthConfigChart = function() {
         data: sortedCodes.map(c => counts[c]),
         backgroundColor: sortedCodes.map(c => palette[c] || '#0d9488'),
         borderRadius: 12,
-        barThickness: 60
+        barThickness: 50, categoryPercentage: 0.62
       }]
     },
     options: {
@@ -64,7 +64,7 @@ window.updateSouthConfigChart = function() {
       },
       scales: {
         y: { display: false, grace: '20%' },
-        x: { grid: { display: false }, ticks: { font: { weight: '800', size: 12 } } }
+        x: { grid: { display: false }, ticks: { font: { weight: '800', size: 12 }, padding: 10 } }
       }
     }
   });

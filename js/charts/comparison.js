@@ -51,8 +51,8 @@ window.updateComparisonChart = function() {
     data: {
       labels,
       datasets: [
-        { label: 'New User Acquisition', data: labels.map(l => d1[l] || 0), backgroundColor: '#2563eb', borderRadius: 8, barThickness: 16 },
-        { label: 'Pending Physical Install', data: labels.map(l => d2[l] || 0), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 16 }
+        { label: 'New User Acquisition', data: labels.map(l => d1[l] || 0), backgroundColor: '#2563eb', borderRadius: 8, barThickness: 14, categoryPercentage: 0.6 },
+        { label: 'Pending Physical Install', data: labels.map(l => d2[l] || 0), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 14, categoryPercentage: 0.6 }
       ]
     },
     options: {
@@ -72,7 +72,7 @@ window.updateComparisonChart = function() {
       },
       scales: {
         x: { grid: { color: '#f1f5f9' }, border: { display: false }, grace: '28%', ticks: { display: false } },
-        y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: '700', size: 11 } } }
+        y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: '700', size: 11 }, padding: 10 } }
       }
     }
   });

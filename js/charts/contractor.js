@@ -105,8 +105,8 @@ window.updateZoneContractorAnalysis = function() {
     data: {
       labels: chartData.labels,
       datasets: [
-        { label: 'New', data: chartData.newUsers, backgroundColor: '#2563eb', barThickness: 20 },
-        { label: 'Pending', data: chartData.pendingUsers, backgroundColor: '#7c3aed', barThickness: 20 }
+        { label: 'New', data: chartData.newUsers, backgroundColor: '#2563eb', barThickness: 18, categoryPercentage: 0.62 },
+        { label: 'Pending', data: chartData.pendingUsers, backgroundColor: '#7c3aed', barThickness: 18, categoryPercentage: 0.62 }
       ]
     },
     options: {
@@ -118,7 +118,7 @@ window.updateZoneContractorAnalysis = function() {
       },
       scales: {
         x: { stacked: true, display: false, grace: '5%' },
-        y: { stacked: true, grid: { display: false }, ticks: { font: { weight: '700', size: 11 } } }
+        y: { stacked: true, grid: { display: false }, ticks: { font: { weight: '700', size: 11 }, padding: 10 } }
       }
     }
   });
