@@ -113,11 +113,20 @@
                     </div>
                 </div>
                 <div class="lg:col-span-3 bg-white p-8 rounded-3xl border border-slate-200 card-shadow chart-container">
-                    <div class="flex justify-between items-center mb-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                         <h3 class="text-lg font-black text-slate-800">South Configuration Distribution</h3>
-                        <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-[10px] font-black uppercase">Live Analysis</span>
+                        <div class="flex items-center gap-2">
+                            <select id="sortSouth" onchange="updateSouthConfigChart()" class="p-2 border border-slate-200 rounded-xl text-xs font-bold bg-slate-50 outline-none">
+                                <option value="desc">Sort: High to Low</option>
+                                <option value="asc">Sort: Low to High</option>
+                            </select>
+                            <button onclick="exportChartAsImage('southExportArea')" class="px-4 py-2 bg-teal-600 text-white rounded-xl font-black text-xs hover:bg-teal-700 transition">Export PNG</button>
+                            <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-[10px] font-black uppercase">Live Analysis</span>
+                        </div>
                     </div>
-                    <canvas id="canvas5"></canvas>
+                    <div id="southExportArea" class="h-full">
+                        <canvas id="canvas5"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
