@@ -1,6 +1,6 @@
 window.updateComparisonChart = function() {
   const sortType = document.getElementById('sortComparison')?.value || 'desc';
-  const labels = [...new Set(Object.values(window.govMapping))];
+  let labels = [];
   const d1 = {}, d2 = {};
 
   if (!window.appState['1'].rows.length && !window.appState['2'].rows.length) {
@@ -20,9 +20,13 @@ window.updateComparisonChart = function() {
   window.appState['1'].rows.forEach(r => { const g = r[window.appState['1'].govIdx]; d1[g] = (d1[g] || 0) + 1; });
   window.appState['2'].rows.forEach(r => { const g = r[window.appState['2'].govIdx]; d2[g] = (d2[g] || 0) + 1; });
 
+  labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
+  if (!labels.length) labels = [...new Set(Object.values(window.govMapping))];
+
   labels.sort((a, b) => {
     const totalA = (d1[a] || 0) + (d2[a] || 0);
     const totalB = (d1[b] || 0) + (d2[b] || 0);
+    if (totalA === totalB) return a.localeCompare(b);
     return sortType === 'desc' ? totalB - totalA : totalA - totalB;
   });
 
