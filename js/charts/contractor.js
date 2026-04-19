@@ -112,6 +112,7 @@ window.updateZoneContractorAnalysis = function() {
     options: {
       indexAxis: 'y',
       maintainAspectRatio: false,
+      layout: { padding: { top: 12, bottom: 12, left: 10, right: 10 } },
       plugins: {
         legend: { position: 'bottom', align: 'end', labels: { font: { weight: '700' }, boxWidth: 12 } },
         datalabels: { color: '#fff', font: { size: 9, weight: '900' }, formatter: v => v > 0 ? v : '' }

@@ -58,6 +58,7 @@ window.updateSouthConfigChart = function() {
     },
     options: {
       maintainAspectRatio: false,
+      layout: { padding: { top: 14, bottom: 10, left: 10, right: 10 } },
       plugins: {
         legend: { display: false },
         datalabels: { anchor: 'end', align: 'top', font: { weight: '900', size: 14 }, color: '#0d9488' }

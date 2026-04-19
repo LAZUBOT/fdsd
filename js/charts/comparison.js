@@ -58,7 +58,7 @@ window.updateComparisonChart = function() {
     options: {
       indexAxis: 'y',
       maintainAspectRatio: false,
-      layout: { padding: { right: 95, left: 6 } },
+      layout: { padding: { top: 12, bottom: 12, right: 95, left: 10 } },
       plugins: {
         legend: { position: 'top', align: 'start', labels: { font: { weight: '700', size: 12 }, padding: 18, usePointStyle: true } },
         datalabels: {
