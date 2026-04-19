@@ -19,7 +19,7 @@ window.exportChartAsImage = async function(elementId) {
     window.showToast('Generating High-Res Capture...');
     const target = document.getElementById(elementId);
     const canvas = await html2canvas(target, {
-      scale: 3,
+      scale: 5,
       useCORS: true,
       backgroundColor: '#ffffff',
       onclone: (doc) => {
