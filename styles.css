@@ -70,3 +70,24 @@ body {
   .tab-btn { font-size: 12px; padding: 8px 10px; }
   #toast { min-width: 220px; bottom: 20px; }
 }
+
+@media (max-width: 768px) {
+  main.max-w-7xl { padding-left: 0.9rem !important; padding-right: 0.9rem !important; }
+  .card-shadow { box-shadow: 0 2px 8px rgb(15 23 42 / 6%); }
+  .glass-nav .max-w-7xl { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .glass-nav .flex.items-center.gap-1 { gap: 0.35rem !important; }
+  .tab-btn { min-height: 38px; border-radius: 0.75rem; }
+  .chart-container { height: 340px !important; }
+  #chartExportArea { height: 500px !important; }
+  #zoneExportArea .h-\[400px\] { height: 280px !important; }
+  #zoneTableBody td, #zoneTableBody th { padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 13px; }
+  .tab-btn { font-size: 11px !important; padding: 7px 10px !important; }
+  .chart-container { height: 300px !important; }
+  #chartExportArea { height: 430px !important; padding: 0.75rem !important; }
+  #zoneExportArea .h-\[400px\] { height: 240px !important; }
+  #toast { min-width: 190px; font-size: 12px; padding: 12px; bottom: 14px; }
+}
