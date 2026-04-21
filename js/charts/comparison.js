@@ -1,7 +1,6 @@
 window.updateComparisonChart = function() {
-  // 1. التحقق الأولي من وجود البيانات لتجنب الأخطاء البرمجية
+  // 1. التأكد من وجود البيانات الأساسية
   if (!window.appState || !window.appState['1'] || !window.appState['2']) {
-    console.warn("Comparison Chart: البيانات غير مكتملة في appState.");
     return;
   }
 
@@ -11,22 +10,33 @@ window.updateComparisonChart = function() {
   
   const d1 = {}, d2 = {};
 
-  // 2. دالة داخلية لتجميع البيانات ومعالجة القيم غير المعرفة (Fix undefined issue)
+  // 2. دالة معالجة البيانات مع تجاهل القيم التالفة أو الفارغة تماماً
   const processRows = (rows, govIdx, targetObj) => {
     rows.forEach(r => {
+      if (!r) return; // تجاهل إذا كان السطر نفسه غير موجود
+      
       let val = r[govIdx];
-      // إذا كانت القيمة غير موجودة أو فارغة، نضعها تحت مسمى "غير محدد" أو نتجاهلها
-      const label = (val !== undefined && val !== null && val.toString().trim() !== "") 
-                    ? val.toString().trim() 
-                    : "0";
+      
+      // التحقق: إذا كانت القيمة فارغة أو غير معرفة، يتم القفز للسطر التالي (Skip)
+      if (val === undefined || val === null || val.toString().trim() === "") {
+        return; 
+      }
+
+      const label = val.toString().trim();
       targetObj[label] = (targetObj[label] || 0) + 1;
     });
   };
 
-  // 3. التحقق من وجود بيانات لعرضها
-  if (rows1.length === 0 && rows2.length === 0) {
-    const elements = ['cmpNewTotal', 'cmpPendingTotal', 'cmpCombinedTotal'];
-    elements.forEach(id => { if(document.getElementById(id)) document.getElementById(id).textContent = '0'; });
+  // معالجة المجموعات (سيتم تجاهل أي خلل تلقائياً هنا)
+  processRows(rows1, window.appState['1'].govIdx, d1);
+  processRows(rows2, window.appState['2'].govIdx, d2);
+
+  // 3. التحقق مما إذا كان هناك بيانات صالحة للعرض بعد الفلترة
+  const labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
+
+  if (labels.length === 0) {
+    const ids = ['cmpNewTotal', 'cmpPendingTotal', 'cmpCombinedTotal'];
+    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).textContent = '0'; });
     
     if (window.appState.comparisonChart) {
       window.appState.comparisonChart.destroy();
@@ -35,13 +45,7 @@ window.updateComparisonChart = function() {
     return;
   }
 
-  // معالجة المجموعات
-  processRows(rows1, window.appState['1'].govIdx, d1);
-  processRows(rows2, window.appState['2'].govIdx, d2);
-
-  // 4. إنشاء القائمة الموحدة للعناوين (Labels) وترتيبها
-  let labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
-
+  // 4. ترتيب البيانات
   labels.sort((a, b) => {
     const totalA = (d1[a] || 0) + (d2[a] || 0);
     const totalB = (d1[b] || 0) + (d2[b] || 0);
@@ -49,7 +53,7 @@ window.updateComparisonChart = function() {
     return sortType === 'desc' ? totalB - totalA : totalA - totalB;
   });
 
-  // 5. تحديث الأرقام الإجمالية في واجهة المستخدم
+  // 5. تحديث الأرقام الإجمالية (بناءً على البيانات الصالحة فقط)
   const newTotal = Object.values(d1).reduce((a, b) => a + b, 0);
   const pendingTotal = Object.values(d2).reduce((a, b) => a + b, 0);
   const combinedTotal = newTotal + pendingTotal;
@@ -63,16 +67,13 @@ window.updateComparisonChart = function() {
   setElText('cmpPendingTotal', pendingTotal);
   setElText('cmpCombinedTotal', combinedTotal);
 
-  // 6. تدمير المخطط القديم لإنشاء الجديد (بناءً على طلب Chart.js)
-  if (window.appState.comparisonChart) {
-    window.appState.comparisonChart.destroy();
-  }
+  // 6. رسم المخطط البياني
+  if (window.appState.comparisonChart) window.appState.comparisonChart.destroy();
 
   const canvas = document.getElementById('canvasComparison');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  // 7. إنشاء الرسم البياني الجديد
   window.appState.comparisonChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -101,11 +102,7 @@ window.updateComparisonChart = function() {
       maintainAspectRatio: false,
       layout: { padding: { top: 12, bottom: 12, right: 95, left: 10 } },
       plugins: {
-        legend: { 
-          position: 'top', 
-          align: 'start', 
-          labels: { font: { weight: '700', size: 12 }, padding: 18, usePointStyle: true } 
-        },
+        legend: { position: 'top', align: 'start', labels: { font: { weight: '700', size: 12 }, usePointStyle: true } },
         datalabels: {
           anchor: 'end',
           align: 'right',
