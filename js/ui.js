@@ -1,4 +1,4 @@
-window._rafJobs = {}
+window._rafJobs = {};
 
 window.scheduleUpdate = function(key, fn) {
   if (window._rafJobs[key]) cancelAnimationFrame(window._rafJobs[key]);
@@ -8,110 +8,137 @@ window.scheduleUpdate = function(key, fn) {
   });
 };
 
+// Keep track of the timeout to prevent overlapping toasts hiding each other
+let toastTimeout; 
 window.showToast = function(msg) {
   const t = document.getElementById('toast');
+  if (!t) return;
+  
   t.textContent = msg;
-  t.className = 'show';
-  setTimeout(() => { t.className = ''; }, 3000);
+  t.classList.add('show');
+  
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
 };
 
 window.switchTab = function(tabId) {
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-  document.getElementById(tabId).classList.remove('hidden');
+  // Use classList.toggle for cleaner state management
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('hidden', t.id !== tabId));
+  
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    if (btn.id === `btn-${tabId}`) {
-      btn.classList.add('tab-active');
-      btn.classList.remove('text-slate-500');
-    } else {
-      btn.classList.remove('tab-active');
-      btn.classList.add('text-slate-500');
-    }
+    const isActive = btn.id === `btn-${tabId}`;
+    btn.classList.toggle('tab-active', isActive);
+    btn.classList.toggle('text-slate-500', !isActive);
   });
-  if (tabId === 'tab3') window.scheduleUpdate('cmp-tab', window.updateComparisonChart);
-  if (tabId === 'tab4') window.scheduleUpdate('contractor-tab', window.updateZoneContractorAnalysis);
-  if (tabId === 'tab5') window.scheduleUpdate('south-tab', window.updateSouthConfigChart);
+
+  // Map specific actions to tabs instead of chained IF statements
+  const tabActions = {
+    'tab3': () => window.scheduleUpdate('cmp-tab', window.updateComparisonChart),
+    'tab4': () => window.scheduleUpdate('contractor-tab', window.updateZoneContractorAnalysis),
+    'tab5': () => window.scheduleUpdate('south-tab', window.updateSouthConfigChart)
+  };
+
+  if (tabActions[tabId]) tabActions[tabId]();
 };
 
 window.populateFilters = function(fileNum) {
   document.getElementById(`filterArea${fileNum}`)?.classList.remove('hidden');
-  const provinces = [...new Set(Object.values(window.govMapping))].sort();
+  
+  const provinces = [...new Set(Object.values(window.govMapping || {}))].sort();
+  
+  // Batch HTML construction to prevent multiple costly DOM reflows
+  const optionsHTML = '<option value="all">All Iraq</option>' + 
+    provinces.map(v => `<option value="${v}">${v}</option>`).join('');
+
   [`govFilter${fileNum}`, 'zoneGovFilter'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
+    
     const currentVal = sel.value;
-    sel.innerHTML = '<option value="all">All Iraq</option>';
-    provinces.forEach(v => sel.innerHTML += `<option value="${v}">${v}</option>`);
-    if (currentVal && [...sel.options].some(o => o.value === currentVal)) sel.value = currentVal;
+    sel.innerHTML = optionsHTML; 
+    
+    // Efficiently restore previous value if it exists in the new options
+    if (currentVal && provinces.includes(currentVal)) {
+      sel.value = currentVal;
+    }
   });
 };
 
 window.applyFilter = function(fileNum) {
   const state = window.appState[fileNum];
   const select = document.getElementById(`govFilter${fileNum}`);
-  if (!select) return;
+  if (!state || !select) return;
 
   const val = select.value || 'all';
   const filtered = val === 'all' ? state.rows : state.rows.filter(r => r[state.govIdx] === val);
+  
   window.scheduleUpdate(`single-${fileNum}`, () => window.renderSingleChart(fileNum, filtered));
 
-  if (fileNum === '1') {
-    window.scheduleUpdate('south-filter', window.updateSouthConfigChart);
-    window.scheduleUpdate('cmp-filter-1', window.updateComparisonChart);
-  }
-  if (fileNum === '2') {
-    window.scheduleUpdate('cmp-filter-2', window.updateComparisonChart);
-    window.scheduleUpdate('contractor-filter-2', window.updateZoneContractorAnalysis);
+  // Data-driven update dependencies
+  const updates = {
+    '1': [
+      { key: 'south-filter', fn: window.updateSouthConfigChart },
+      { key: 'cmp-filter-1', fn: window.updateComparisonChart }
+    ],
+    '2': [
+      { key: 'cmp-filter-2', fn: window.updateComparisonChart },
+      { key: 'contractor-filter-2', fn: window.updateZoneContractorAnalysis }
+    ]
+  };
+
+  if (updates[fileNum]) {
+    updates[fileNum].forEach(u => window.scheduleUpdate(u.key, u.fn));
   }
 };
 
 window.resetAllData = function() {
-  ['1', '2'].forEach(fileNum => {
-    const state = window.appState[fileNum];
-    state.rows = [];
-    state.headers = [];
-    state.govIdx = -1;
-    state.zoneIdx = -1;
-    state.contractorIdx = -1;
-    state.statusIdx = -1;
-
-    if (state.chart) {
-      state.chart.destroy();
-      state.chart = null;
-    }
-
-    const filterArea = document.getElementById(`filterArea${fileNum}`);
-    if (filterArea) filterArea.classList.add('hidden');
+  const resetElements = (fileNum) => {
+    document.getElementById(`filterArea${fileNum}`)?.classList.add('hidden');
     const rowCount = document.getElementById(`rowCount${fileNum}`);
     if (rowCount) rowCount.textContent = '0';
     const fileInput = document.getElementById(`fileInput${fileNum}`);
     if (fileInput) fileInput.value = '';
+  };
+
+  // Reset file states (1 and 2)
+  ['1', '2'].forEach(fileNum => {
+    const state = window.appState[fileNum];
+    if (state) {
+      Object.assign(state, { rows: [], headers: [], govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 });
+      if (state.chart) {
+        state.chart.destroy();
+        state.chart = null;
+      }
+    }
+    resetElements(fileNum);
   });
 
-  ['5'].forEach(key => {
-    const st = window.appState[key];
-    if (st?.chart) {
-      st.chart.destroy();
-      st.chart = null;
+  // Destroy remaining explicit charts
+  ['5', 'comparisonChart', 'zoneChart'].forEach(key => {
+    const target = key.length === 1 ? window.appState[key] : window.appState;
+    const chartKey = key.length === 1 ? 'chart' : key;
+    
+    if (target?.[chartKey]) {
+      target[chartKey].destroy();
+      target[chartKey] = null;
     }
   });
 
-  if (window.appState.comparisonChart) {
-    window.appState.comparisonChart.destroy();
-    window.appState.comparisonChart = null;
-  }
-  if (window.appState.zoneChart) {
-    window.appState.zoneChart.destroy();
-    window.appState.zoneChart = null;
-  }
+  // Reset loose UI elements safely
+  const uiDefaults = {
+    'rowCount5': '0',
+    'statTotal': '0',
+    'statContractors': '0'
+  };
+  
+  Object.entries(uiDefaults).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  });
 
-  const rowCount5 = document.getElementById('rowCount5');
-  if (rowCount5) rowCount5.textContent = '0';
-  const statTotal = document.getElementById('statTotal');
-  if (statTotal) statTotal.textContent = '0';
-  const statContractors = document.getElementById('statContractors');
-  if (statContractors) statContractors.textContent = '0';
   const search = document.getElementById('contractorSearch');
   if (search) search.value = '';
+
   const tbody = document.getElementById('zoneTableBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-slate-400 italic font-medium">Awaiting data upload...</td></tr>';
 
