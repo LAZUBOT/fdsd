@@ -1,5 +1,5 @@
 window.updateComparisonChart = function() {
-  // 1. التأكد من وجود البيانات الأساسية
+  // 1. التحقق من وجود حاوية البيانات الأساسية
   if (!window.appState || !window.appState['1'] || !window.appState['2']) {
     return;
   }
@@ -10,14 +10,17 @@ window.updateComparisonChart = function() {
   
   const d1 = {}, d2 = {};
 
-  // 2. دالة معالجة البيانات مع تجاهل القيم التالفة أو الفارغة تماماً
+  /**
+   * دالة معالجة البيانات: 
+   * تقوم بفلترة السجلات واستبعاد أي قيمة غير صالحة تلقائياً.
+   */
   const processRows = (rows, govIdx, targetObj) => {
     rows.forEach(r => {
-      if (!r) return; // تجاهل إذا كان السطر نفسه غير موجود
+      if (!r) return; // تخطي إذا كان السطر فارغاً
       
-      let val = r[govIdx];
+      const val = r[govIdx];
       
-      // التحقق: إذا كانت القيمة فارغة أو غير معرفة، يتم القفز للسطر التالي (Skip)
+      // الفلترة الصارمة: تخطي القيمة إذا كانت (undefined, null, أو نص فارغ)
       if (val === undefined || val === null || val.toString().trim() === "") {
         return; 
       }
@@ -27,16 +30,20 @@ window.updateComparisonChart = function() {
     });
   };
 
-  // معالجة المجموعات (سيتم تجاهل أي خلل تلقائياً هنا)
+  // معالجة المجموعتين مع الفلترة
   processRows(rows1, window.appState['1'].govIdx, d1);
   processRows(rows2, window.appState['2'].govIdx, d2);
 
-  // 3. التحقق مما إذا كان هناك بيانات صالحة للعرض بعد الفلترة
+  // 2. تجميع العناوين (Labels) الصالحة فقط
   const labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
 
+  // إذا لم تكن هناك بيانات صالحة بعد الفلترة، نقوم بتصفير الواجهة والخروج
   if (labels.length === 0) {
     const ids = ['cmpNewTotal', 'cmpPendingTotal', 'cmpCombinedTotal'];
-    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).textContent = '0'; });
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '0';
+    });
     
     if (window.appState.comparisonChart) {
       window.appState.comparisonChart.destroy();
@@ -45,7 +52,7 @@ window.updateComparisonChart = function() {
     return;
   }
 
-  // 4. ترتيب البيانات
+  // 3. ترتيب البيانات بناءً على المجموع أو الأبجدية
   labels.sort((a, b) => {
     const totalA = (d1[a] || 0) + (d2[a] || 0);
     const totalB = (d1[b] || 0) + (d2[b] || 0);
@@ -53,7 +60,7 @@ window.updateComparisonChart = function() {
     return sortType === 'desc' ? totalB - totalA : totalA - totalB;
   });
 
-  // 5. تحديث الأرقام الإجمالية (بناءً على البيانات الصالحة فقط)
+  // 4. تحديث الأرقام الإجمالية في واجهة المستخدم (للبيانات الصالحة فقط)
   const newTotal = Object.values(d1).reduce((a, b) => a + b, 0);
   const pendingTotal = Object.values(d2).reduce((a, b) => a + b, 0);
   const combinedTotal = newTotal + pendingTotal;
@@ -67,8 +74,10 @@ window.updateComparisonChart = function() {
   setElText('cmpPendingTotal', pendingTotal);
   setElText('cmpCombinedTotal', combinedTotal);
 
-  // 6. رسم المخطط البياني
-  if (window.appState.comparisonChart) window.appState.comparisonChart.destroy();
+  // 5. تهيئة الرسم البياني (Chart.js)
+  if (window.appState.comparisonChart) {
+    window.appState.comparisonChart.destroy();
+  }
 
   const canvas = document.getElementById('canvasComparison');
   if (!canvas) return;
@@ -102,7 +111,11 @@ window.updateComparisonChart = function() {
       maintainAspectRatio: false,
       layout: { padding: { top: 12, bottom: 12, right: 95, left: 10 } },
       plugins: {
-        legend: { position: 'top', align: 'start', labels: { font: { weight: '700', size: 12 }, usePointStyle: true } },
+        legend: { 
+          position: 'top', 
+          align: 'start', 
+          labels: { font: { weight: '700', size: 12 }, padding: 18, usePointStyle: true } 
+        },
         datalabels: {
           anchor: 'end',
           align: 'right',
@@ -113,8 +126,17 @@ window.updateComparisonChart = function() {
         }
       },
       scales: {
-        x: { grid: { color: '#f1f5f9' }, border: { display: false }, grace: '28%', ticks: { display: false } },
-        y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: '700', size: 11 }, padding: 10 } }
+        x: { 
+          grid: { color: '#f1f5f9' }, 
+          border: { display: false }, 
+          grace: '28%', 
+          ticks: { display: false } 
+        },
+        y: { 
+          grid: { display: false }, 
+          border: { display: false }, 
+          ticks: { font: { weight: '700', size: 11 }, padding: 10 } 
+        }
       }
     }
   });
