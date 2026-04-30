@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EL Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+        :root {
+          --primary: #2563eb;
+          --secondary: #7c3aed;
+          --accent: #14b8a6;
+          --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+          font-family: var(--font-main);
+          background-color: #f1f5f9;
+          color: #0f172a;
+        }
+
+        .glass-nav {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(16px);
+          border-bottom: 1px solid rgba(226, 232, 240, 1);
+        }
+
+        .tab-btn { position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .tab-active { color: var(--primary) !important; font-weight: 800 !important; }
+        .tab-active::after {
+          content: '';
+          position: absolute;
+          bottom: -4px;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: var(--primary);
+          border-radius: 10px;
+        }
+
+        .card-shadow { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
+
+        #toast {
+          visibility: hidden;
+          min-width: 280px;
+          background-color: #0f172a;
+          color: #fff;
+          text-align: center;
+          border-radius: 16px;
+          padding: 16px;
+          position: fixed;
+          z-index: 100;
+          left: 50%;
+          bottom: 40px;
+          transform: translateX(-50%);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+          font-weight: 600;
+        }
+        #toast.show { visibility: visible; animation: fadein 0.4s, fadeout 0.4s 2.6s; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .chart-container { position: relative; width: 100%; height: 500px; }
+
+        .bg-south { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
+
+        /* تعديلات التصدير بالعرض (تصغير حجم التقرير) */
+        .exporting-landscape #marketStatsContainer {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+        }
+        .exporting-landscape .text-2xl { font-size: 1.25rem !important; }
+        /* تصغير طول المخطط البياني عند التصدير ليكون متناسب مع القيم الصغيرة */
+        .exporting-landscape #chartExportArea { height: 380px !important; }
+
+        @media (max-width: 640px) {
+          .chart-container { height: 360px; }
+          #chartExportArea { height: 520px !important; padding: 1rem !important; }
+          #zoneExportArea .h-[400px] { height: 300px !important; }
+          .tab-btn { font-size: 12px; padding: 8px 10px; }
+          #toast { min-width: 220px; bottom: 20px; }
+        }
+
+        @media (max-width: 768px) {
+          main.max-w-7xl { padding-left: 0.9rem !important; padding-right: 0.9rem !important; }
+          .card-shadow { box-shadow: 0 2px 8px rgb(15 23 42 / 6%); }
+          .glass-nav .max-w-7xl { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+          .glass-nav .flex.items-center.gap-1 { gap: 0.35rem !important; }
+          .tab-btn { min-height: 38px; border-radius: 0.75rem; }
+          .chart-container { height: 340px !important; }
+          #chartExportArea { height: 500px !important; }
+          #zoneExportArea .h-\[400px\] { height: 280px !important; }
+          #zoneTableBody td, #zoneTableBody th { padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
+        }
+
+        @media (max-width: 480px) {
+          body { font-size: 13px; }
+          .tab-btn { font-size: 11px !important; padding: 7px 10px !important; }
+          .chart-container { height: 300px !important; }
+          #chartExportArea { height: 430px !important; padding: 0.75rem !important; }
+          #zoneExportArea .h-\[400px\] { height: 240px !important; }
+          #toast { min-width: 190px; font-size: 12px; padding: 12px; bottom: 14px; }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <div id="toast">Message</div>
+
+    <nav class="glass-nav sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-200">EL</div>
+                    <div class="flex flex-col">
+                        <span class="text-lg font-extrabold tracking-tight text-slate-900 leading-none">Data Analyzer</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Operational Intel v2.1</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-4 overflow-x-auto w-full md:w-auto px-2 pb-1">
+                    <button onclick="switchTab('tab1')" id="btn-tab1" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold tab-active">New Users</button>
+                    <button onclick="switchTab('tab2')" id="btn-tab2" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Pending Installs</button>
+                    <button onclick="switchTab('tab5')" id="btn-tab5" class="tab-btn px-4 py-2 text-sm text-teal-600 whitespace-nowrap font-bold">South & SD Gov</button>
+                    <button onclick="switchTab('tab3')" id="btn-tab3" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Market Share</button>
+                    <button onclick="switchTab('tab4')" id="btn-tab4" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Contractor Drill-down</button>
+                    <button onclick="resetAllData()" class="ml-auto md:ml-2 px-4 py-2 text-xs bg-slate-100 text-slate-700 rounded-xl font-black whitespace-nowrap hover:bg-slate-200">Reset Data</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 mt-8">
+        <div id="tab1" class="tab-content transition-opacity duration-300">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4">Input Data</h3>
+                        <div class="relative group">
+                            <input type="file" id="fileInput1" onchange="handleFileUpload(event, '1')" accept=".csv" class="hidden" />
+                            <label for="fileInput1" class="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all">
+                                <svg class="w-8 h-8 text-blue-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                <span class="text-sm font-bold text-slate-600">Upload CSV</span>
+                            </label>
+                        </div>
+                        <div id="filterArea1" class="hidden mt-6 space-y-4">
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Filter Province</label>
+                            <select id="govFilter1" onchange="applyFilter('1')" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"></select>
+                            
+                            <button onclick="exportProvinceData('1')" class="w-full px-4 py-3 bg-blue-100 text-blue-700 rounded-xl text-xs font-black uppercase tracking-wide hover:bg-blue-200 transition">Download Province Data</button>
+                            
+                            <div class="pt-4 border-t border-slate-100">
+                                <div class="bg-gradient-to-br from-blue-600 to-blue-700 py-4 px-2 flex flex-col items-center justify-center text-center rounded-2xl text-white shadow-xl shadow-blue-100">
+                                    <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">Live Count</p>
+                                    <p id="rowCount1" class="text-4xl font-black mt-1">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 bg-white p-8 rounded-3xl border border-slate-200 card-shadow chart-container">
+                    <canvas id="canvas1"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab2" class="tab-content hidden transition-opacity duration-300">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4">Input Data</h3>
+                        <div class="relative group">
+                            <input type="file" id="fileInput2" onchange="handleFileUpload(event, '2')" accept=".csv" class="hidden" />
+                            <label for="fileInput2" class="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all">
+                                <svg class="w-8 h-8 text-purple-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                <span class="text-sm font-bold text-slate-600">Upload CSV</span>
+                            </label>
+                        </div>
+                        <div id="filterArea2" class="hidden mt-6 space-y-4">
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Filter Province</label>
+                            <select id="govFilter2" onchange="applyFilter('2')" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"></select>
+                            
+                            <button onclick="exportProvinceData('2')" class="w-full px-4 py-3 bg-purple-100 text-purple-700 rounded-xl text-xs font-black uppercase tracking-wide hover:bg-purple-200 transition">Download Province Data</button>
+                            
+                            <div class="pt-4 border-t border-slate-100">
+                                <div class="bg-gradient-to-br from-purple-600 to-purple-700 py-4 px-2 flex flex-col items-center justify-center text-center rounded-2xl text-white shadow-xl shadow-purple-100">
+                                    <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">Pending Count</p>
+                                    <p id="rowCount2" class="text-4xl font-black mt-1">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 bg-white p-8 rounded-3xl border border-slate-200 card-shadow chart-container">
+                    <canvas id="canvas2"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab5" class="tab-content hidden transition-opacity duration-300">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 text-teal-600">Infrastructure Config</h3>
+                        <p class="text-xs text-slate-400 mb-4 font-medium">Automatic classification for FTK, FBS, FNS, FMU, FAM sites.</p>
+                        <div class="pt-4 border-t border-slate-100">
+                            <div class="bg-south py-4 px-2 flex flex-col items-center justify-center text-center rounded-2xl text-white shadow-xl shadow-teal-100">
+                                <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">South Region Focus</p>
+                                <p id="rowCount5" class="text-4xl font-black mt-1">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 bg-white p-8 rounded-3xl border border-slate-200 card-shadow chart-container">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                        <h3 class="text-lg font-black text-slate-800">South Configuration Distribution</h3>
+                        <div class="flex items-center gap-2" data-html2canvas-ignore="true">
+                            <select id="sortSouth" onchange="updateSouthConfigChart()" class="p-2 border border-slate-200 rounded-xl text-xs font-bold bg-slate-50 outline-none">
+                                <option value="desc">Sort: High to Low</option>
+                                <option value="asc">Sort: Low to High</option>
+                            </select>
+                            <button onclick="exportChartAsImage('southExportArea')" class="px-4 py-2 bg-teal-600 text-white rounded-xl font-black text-xs hover:bg-teal-700 transition">Export PNG</button>
+                            <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-[10px] font-black uppercase">Live Analysis</span>
+                        </div>
+                    </div>
+                    <div id="southExportArea" class="h-full bg-white">
+                        <canvas id="canvas5"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab3" class="tab-content hidden transition-opacity duration-300">
+            <div id="fullMarketReport" class="bg-white p-6 rounded-[2.5rem] border border-slate-200 card-shadow transition-all">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                    <div data-html2canvas-ignore="true">
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Market Comparison</h3>
+                        <p class="text-slate-500 font-medium text-sm mt-1">Correlation between New Users and Pending Installs</p>
+                    </div>
+                    <div class="flex items-center gap-3" data-html2canvas-ignore="true">
+                        <select id="sortComparison" onchange="updateComparisonChart()" class="p-3 border border-slate-200 rounded-2xl text-sm font-bold bg-slate-50 outline-none">
+                            <option value="desc">Sort: High to Low</option>
+                            <option value="asc">Sort: Low to High</option>
+                        </select>
+                        <button onclick="exportComparisonData()" class="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 whitespace-nowrap">Excel</button>
+                        <button onclick="exportChartAsImage('fullMarketReport')" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 whitespace-nowrap">Export Landscape</button>
+                    </div>
+                </div>
+                
+                <!-- البطاقات المصغرة والمتوسطة مع توسيط النصوص -->
+                <div id="marketStatsContainer" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 mb-5 transition-all duration-300">
+                    <div class="py-2.5 px-2 flex flex-col items-center justify-center text-center rounded-xl bg-blue-50 border border-blue-100">
+                        <p class="text-[10px] uppercase font-black text-blue-500 tracking-wider">New Users</p>
+                        <p id="cmpNewTotal" class="text-lg font-black text-blue-700 mt-0.5">0</p>
+                    </div>
+                    <div class="py-2.5 px-2 flex flex-col items-center justify-center text-center rounded-xl bg-purple-50 border border-purple-100">
+                        <p class="text-[10px] uppercase font-black text-purple-500 tracking-wider">Pending</p>
+                        <p id="cmpPendingTotal" class="text-lg font-black text-purple-700 mt-0.5">0</p>
+                    </div>
+                    <div class="py-2.5 px-2 flex flex-col items-center justify-center text-center rounded-xl bg-teal-50 border border-teal-100">
+                        <p class="text-[10px] uppercase font-black text-teal-600 tracking-wider">South&SD Region</p>
+                        <p id="cmpSouthTotal" class="text-lg font-black text-teal-700 mt-0.5">0</p>
+                    </div>
+                    <div class="py-2.5 px-2 flex flex-col items-center justify-center text-center rounded-xl bg-slate-50 border border-slate-200" data-html2canvas-ignore="true">
+                        <p class="text-[10px] uppercase font-black text-slate-500 tracking-wider">Total Combined</p>
+                        <p id="cmpCombinedTotal" class="text-lg font-black text-slate-900 mt-0.5">0</p>
+                    </div>
+                </div>
+                <div id="chartExportArea" class="w-full h-[500px]">
+                    <canvas id="canvasComparison"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab4" class="tab-content hidden transition-opacity duration-300">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 card-shadow">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Contractor Matrix</h3>
+                        <p class="text-slate-500 font-medium text-sm mt-1">Granular analysis of operations per province</p>
+                    </div>
+                    <div class="flex gap-3" data-html2canvas-ignore="true">
+                        <button onclick="exportToExcel()" class="px-6 py-3 bg-emerald-600 text-white rounded-2xl font-black text-sm whitespace-nowrap">Excel</button>
+                        <button onclick="exportChartAsImage('zoneExportArea')" class="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm whitespace-nowrap">Save Graphic</button>
+                    </div>
+                </div>
+
+                <div class="mb-8 p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-wrap lg:flex-nowrap items-center gap-4" data-html2canvas-ignore="true">
+                    <div class="w-full md:w-auto flex-1">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-1.5 ml-1">Focus Province</label>
+                        <select id="zoneGovFilter" onchange="updateZoneContractorAnalysis()" class="w-full p-3.5 border border-slate-200 rounded-xl bg-white font-black text-slate-700"></select>
+                    </div>
+
+                    <div class="w-full md:w-auto flex-1">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-1.5 ml-1">Search Contractor</label>
+                        <input id="contractorSearch" oninput="updateZoneContractorAnalysis()" placeholder="Type contractor name..." class="w-full p-3.5 border border-slate-200 rounded-xl bg-white font-semibold text-slate-700" />
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 mb-6">
+                     <div class="py-3 px-4 flex flex-col items-center justify-center text-center bg-slate-50 rounded-xl border border-slate-100 flex-1 min-w-[140px]">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Coverage</p>
+                        <p id="statTotal" class="text-xl font-black text-slate-900">0</p>
+                    </div>
+                    <div class="py-3 px-4 flex flex-col items-center justify-center text-center bg-slate-50 rounded-xl border border-slate-100 flex-1 min-w-[140px]">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Contractors</p>
+                        <p id="statContractors" class="text-xl font-black text-slate-900">0</p>
+                    </div>
+                </div>
+
+                <div id="zoneExportArea" class="bg-white space-y-8">
+                    <div class="h-[400px] w-full"><canvas id="canvasZoneChart"></canvas></div>
+                    <div class="overflow-hidden border border-slate-100 rounded-[2rem] shadow-sm bg-white">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead class="bg-slate-900 text-white font-bold">
+                                    <tr>
+                                        <th class="px-8 py-5 uppercase tracking-wider text-[11px]">Region & Contractor</th>
+                                        <th class="px-6 py-5 text-center uppercase tracking-wider text-[11px]">New Users</th>
+                                        <th class="px-6 py-5 text-center uppercase tracking-wider text-[11px]">Pending</th>
+                                        <th class="px-8 py-5 text-center uppercase tracking-wider text-[11px] bg-blue-600">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="zoneTableBody" class="divide-y divide-slate-100 bg-white">
+                                    <tr><td colspan="4" class="p-20 text-center text-slate-400 italic font-medium">Awaiting data upload...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. STATE.JS ---
+        window.govMapping = {
+          FDW: "Qadisiya", FBG: "Baghdad", FKU: "Wasit", FNJ: "Najaf",
+          FRM: "Anbar", FBB: "Babil", FBS: "Basrah", FKR: "Karballa",
+          FTK: "Salah aldin", FKK: "Kirkuk", FAM: "Misan", FMU: "Muthanna",
+          FNS: "Thy Qar", FDY: "Diala", FMS: "Naynawa"
+        };
+
+        window.appState = {
+          ui: { contractorSearch: '' },
+          "1": { rows: [], headers: [], chart: null, govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 },
+          "2": { rows: [], headers: [], chart: null, govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 },
+          "5": { chart: null },
+          comparisonChart: null,
+          zoneChart: null
+        };
+
+        // --- 2. CSV.JS ---
+        window.parseCSVLine = function(text) {
+          const result = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const next = text[i + 1];
+            if (char === '"' && inQuotes && next === '"') { current += '"'; i++; continue; }
+            if (char === '"') { inQuotes = !inQuotes; continue; }
+            if (char === ',' && !inQuotes) { result.push(current); current = ''; continue; }
+            current += char;
+          }
+          result.push(current);
+          return result.map(v => (v || '').trim());
+        };
+
+        window.normalizeHeader = h => (h || '').toString().trim().toLowerCase();
+        window.findHeaderIndex = function(headers, candidates) {
+          const normalized = headers.map(window.normalizeHeader);
+          for (const c of candidates) {
+            const idx = normalized.findIndex(h => h.includes(c));
+            if (idx !== -1) return idx;
+          }
+          return -1;
+        };
+
+        window.validateUploadSchema = function(fileNum, headers) {
+          const zoneIdx = window.findHeaderIndex(headers, ['zone']);
+          const contractorIdx = window.findHeaderIndex(headers, ['contractor']);
+          const statusIdx = window.findHeaderIndex(headers, ['status']);
+          const missing = [];
+          if (zoneIdx === -1) missing.push('Zone');
+          if (contractorIdx === -1) missing.push('Contractor');
+          if (fileNum === '2' && statusIdx === -1) missing.push('Status');
+          return { ok: missing.length === 0, zoneIdx, contractorIdx, statusIdx, missing };
+        };
+
+        window.mapProvinceFromZone = function(zoneValue) {
+          const zone = (zoneValue || '').toUpperCase();
+          for (const [code, name] of Object.entries(window.govMapping || {})) {
+            if (zone.startsWith(code)) return name;
+          }
+          return 'Other';
+        };
+
+        window.normalizeStatus = v => (v || '').toString().trim().toLowerCase();
+
+        window.handleFileUpload = function(event, fileNum) {
+          const file = event.target.files?.[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const content = e.target.result;
+            const lines = content.split(/\r?\n/).filter(l => l.trim().length > 0);
+            
+            if (lines.length < 2) return window.showToast('File appears to be empty');
+
+            const headers = window.parseCSVLine(lines[0]);
+            const state = window.appState[fileNum];
+            state.headers = headers;
+
+            const schema = window.validateUploadSchema(fileNum, headers);
+            if (!schema.ok) return window.showToast(`Missing required column(s): ${schema.missing.join(', ')}`);
+
+            state.zoneIdx = schema.zoneIdx;
+            state.contractorIdx = schema.contractorIdx;
+            state.statusIdx = schema.statusIdx;
+            state.govIdx = headers.length; 
+
+            const initialRows = lines.slice(1).map(line => {
+              const row = window.parseCSVLine(line);
+              const zoneValue = row[state.zoneIdx] || '';
+              const mappedGov = window.mapProvinceFromZone(zoneValue);
+              return [...row, mappedGov];
+            });
+
+            state.rows = initialRows;
+
+            if (fileNum === '2' && state.statusIdx !== -1) {
+              state.rows = state.rows.filter(r => window.normalizeStatus(r[state.statusIdx]) === 'pending physical installation');
+            }
+
+            window.populateFilters(fileNum);
+            window.applyFilter(fileNum);
+            window.showToast(`Success: Dataset ${fileNum} integrated (${state.rows.length}/${initialRows.length} rows)`);
+
+            if (fileNum === '1') window.updateSouthConfigChart();
+          };
+          reader.readAsText(file);
+        };
+
+        // --- 3. EXPORT.JS ---
+        const calculateColumnWidths = (data) => {
+            return data[0].map((_, colIndex) => {
+                const maxWidth = data.reduce((max, row) => {
+                    const value = row[colIndex] ? row[colIndex].toString() : "";
+                    const len = value.split('').reduce((acc, char) => acc + (char.charCodeAt(0) > 128 ? 2 : 1.1), 0);
+                    return Math.max(max, len);
+                }, 10); 
+                return { wch: maxWidth + 3 }; 
+            });
+        };
+
+        window.exportToExcel = function() {
+            try {
+                const selectedGov = document.getElementById('zoneGovFilter')?.value || 'all';
+                const tableData = [['Province', 'Contractor', 'New Users', 'Pending Physical', 'Total']];
+                const rows = document.querySelectorAll('#zoneTableBody tr');
+                
+                if (rows.length === 0 || rows[0].innerText.includes('Awaiting data') || rows[0].innerText.includes('No results')) {
+                    return window.showToast('No data found in the table to export');
+                }
+
+                rows.forEach(tr => {
+                    const tds = tr.querySelectorAll('td');
+                    if (tds.length < 4) return;
+                    const zoneInfo = tds[0].innerText.split('\n');
+                    tableData.push([
+                        zoneInfo[0] || "", zoneInfo[1] || "", 
+                        Number(tds[1].innerText.replace(/,/g, '')) || 0,
+                        Number(tds[2].innerText.replace(/,/g, '')) || 0,
+                        Number(tds[3].innerText.replace(/,/g, '')) || 0
+                    ]);
+                });
+
+                const ws = XLSX.utils.aoa_to_sheet(tableData);
+                ws['!cols'] = calculateColumnWidths(tableData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Performance Report");
+                const dateStr = new Date().toISOString().split('T')[0];
+                XLSX.writeFile(wb, `EL_Performance_${selectedGov}_${dateStr}.xlsx`);
+                window.showToast('Excel file exported successfully');
+            } catch (error) { window.showToast('Error during Excel export'); }
+        };
+
+        window.exportChartAsImage = async function(elementId) {
+            try {
+                const isMarketReport = elementId === 'fullMarketReport';
+                window.showToast(isMarketReport ? 'Generating Compact Landscape...' : 'Generating High-Res Capture...');
+                
+                const target = document.getElementById(elementId);
+                if (!target) return window.showToast('Element not found');
+
+                const originalStyles = {
+                    width: target.style.width,
+                    minWidth: target.style.minWidth,
+                    maxWidth: target.style.maxWidth,
+                    margin: target.style.margin,
+                };
+
+                if (isMarketReport) {
+                    target.classList.add('exporting-landscape');
+                    // تصغير العرض ليكون مضغوطاً أكثر ومناسباً للأرقام الصغيرة (500)
+                    target.style.width = '800px';
+                    target.style.minWidth = '800px';
+                    target.style.maxWidth = '800px';
+                    target.style.margin = '0 auto';
+                    
+                    if (window.appState.comparisonChart) {
+                        window.appState.comparisonChart.options.animation = false;
+                        window.appState.comparisonChart.resize();
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                }
+
+                const canvas = await html2canvas(target, {
+                    scale: 3, // تكبير 3 أضعاف يعطي جودة عالية بحجم ملف ممتاز
+                    useCORS: true, 
+                    backgroundColor: '#ffffff'
+                });
+
+                if (isMarketReport) {
+                    target.classList.remove('exporting-landscape');
+                    Object.assign(target.style, originalStyles);
+                    
+                    if (window.appState.comparisonChart) {
+                        window.appState.comparisonChart.options.animation = true;
+                        window.appState.comparisonChart.resize();
+                    }
+                }
+
+                const link = document.createElement('a');
+                link.download = `EL_Analytics_${elementId}_${new Date().toISOString().split('T')[0]}.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+                window.showToast('Report saved successfully');
+            } catch (error) { 
+                console.error('Image Export Error:', error);
+                window.showToast('Error during image export'); 
+            }
+        };
+
+        window.exportProvinceData = function(fileNum) {
+            const state = window.appState ? window.appState[fileNum] : null;
+            if (!state || !state.rows || !state.rows.length || state.govIdx === -1) {
+                return window.showToast('No data available for export');
+            }
+            const counts = {};
+            state.rows.forEach(r => {
+                const province = r[state.govIdx] || 'Undefined';
+                counts[province] = (counts[province] || 0) + 1;
+            });
+            const dataForExcel = [['Province', 'Record Count']];
+            Object.keys(counts).sort((a, b) => counts[b] - counts[a]).forEach(p => dataForExcel.push([p, counts[p]]));
+            const ws = XLSX.utils.aoa_to_sheet(dataForExcel);
+            ws['!cols'] = calculateColumnWidths(dataForExcel);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Province Statistics");
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `EL_Province_Stats_${fileNum}_${dateStr}.xlsx`);
+            window.showToast('Province statistics exported');
+        };
+
+        window.exportComparisonData = function() {
+            const rows1 = window.appState['1']?.rows || [];
+            const rows2 = window.appState['2']?.rows || [];
+            
+            if (rows1.length === 0 && rows2.length === 0) {
+                return window.showToast('No data available for export');
+            }
+
+            const d1 = {}, d2 = {};
+            const processRows = (rows, govIdx, targetObj) => {
+                rows.forEach(r => {
+                    if (!r) return;
+                    const val = r[govIdx];
+                    if (val === undefined || val === null || val.toString().trim() === "") return;
+                    const label = val.toString().trim();
+                    targetObj[label] = (targetObj[label] || 0) + 1;
+                });
+            };
+
+            processRows(rows1, window.appState['1'].govIdx, d1);
+            processRows(rows2, window.appState['2'].govIdx, d2);
+
+            const labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
+            
+            labels.sort((a, b) => {
+                const newA = d1[a] || 0;
+                const newB = d1[b] || 0;
+                if (newA !== newB) return newB - newA;
+                return (d2[b] || 0) - (d2[a] || 0);
+            });
+
+            const dataForExcel = [['Province', 'New Users', 'Pending Physical', 'Total Combined']];
+            labels.forEach(p => {
+                const newU = d1[p] || 0;
+                const pendU = d2[p] || 0;
+                dataForExcel.push([p, newU, pendU, newU + pendU]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(dataForExcel);
+            ws['!cols'] = calculateColumnWidths(dataForExcel);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Market Comparison Stats");
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `EL_Market_Comparison_${dateStr}.xlsx`);
+            window.showToast('Comparison statistics exported to Excel');
+        };
+
+        // --- 4. UI.JS ---
+        window._rafJobs = {};
+        window.scheduleUpdate = function(key, fn) {
+          if (window._rafJobs[key]) cancelAnimationFrame(window._rafJobs[key]);
+          window._rafJobs[key] = requestAnimationFrame(() => { fn(); delete window._rafJobs[key]; });
+        };
+
+        let toastTimeout; 
+        window.showToast = function(msg) {
+          const t = document.getElementById('toast');
+          if (!t) return;
+          t.textContent = msg; t.classList.add('show');
+          if (toastTimeout) clearTimeout(toastTimeout);
+          toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
+        };
+
+        window.switchTab = function(tabId) {
+          document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('hidden', t.id !== tabId));
+          document.querySelectorAll('.tab-btn').forEach(btn => {
+            const isActive = btn.id === `btn-${tabId}`;
+            btn.classList.toggle('tab-active', isActive);
+            btn.classList.toggle('text-slate-500', !isActive);
+          });
+          const tabActions = {
+            'tab3': () => window.scheduleUpdate('cmp-tab', window.updateComparisonChart),
+            'tab4': () => window.scheduleUpdate('contractor-tab', window.updateZoneContractorAnalysis),
+            'tab5': () => window.scheduleUpdate('south-tab', window.updateSouthConfigChart)
+          };
+          if (tabActions[tabId]) tabActions[tabId]();
+        };
+
+        window.populateFilters = function(fileNum) {
+          document.getElementById(`filterArea${fileNum}`)?.classList.remove('hidden');
+          const provinces = [...new Set(Object.values(window.govMapping || {}))].sort();
+          const optionsHTML = '<option value="all">All Iraq</option>' + provinces.map(v => `<option value="${v}">${v}</option>`).join('');
+          [`govFilter${fileNum}`, 'zoneGovFilter'].forEach(id => {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            const currentVal = sel.value;
+            sel.innerHTML = optionsHTML; 
+            if (currentVal && provinces.includes(currentVal)) sel.value = currentVal;
+          });
+        };
+
+        window.applyFilter = function(fileNum) {
+          const state = window.appState[fileNum];
+          const select = document.getElementById(`govFilter${fileNum}`);
+          if (!state || !select) return;
+          const val = select.value || 'all';
+          const filtered = val === 'all' ? state.rows : state.rows.filter(r => r[state.govIdx] === val);
+          
+          window.scheduleUpdate(`single-${fileNum}`, () => window.renderSingleChart(fileNum, filtered));
+          const updates = {
+            '1': [{ key: 'south-filter', fn: window.updateSouthConfigChart }, { key: 'cmp-filter-1', fn: window.updateComparisonChart }],
+            '2': [{ key: 'cmp-filter-2', fn: window.updateComparisonChart }, { key: 'contractor-filter-2', fn: window.updateZoneContractorAnalysis }]
+          };
+          if (updates[fileNum]) updates[fileNum].forEach(u => window.scheduleUpdate(u.key, u.fn));
+        };
+
+        window.resetAllData = function() {
+          const resetElements = (fileNum) => {
+            document.getElementById(`filterArea${fileNum}`)?.classList.add('hidden');
+            const rowCount = document.getElementById(`rowCount${fileNum}`);
+            if (rowCount) rowCount.textContent = '0';
+            const fileInput = document.getElementById(`fileInput${fileNum}`);
+            if (fileInput) fileInput.value = '';
+          };
+
+          ['1', '2'].forEach(fileNum => {
+            const state = window.appState[fileNum];
+            if (state) {
+              Object.assign(state, { rows: [], headers: [], govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 });
+              if (state.chart) { state.chart.destroy(); state.chart = null; }
+            }
+            resetElements(fileNum);
+          });
+
+          ['5', 'comparisonChart', 'zoneChart'].forEach(key => {
+            const target = key.length === 1 ? window.appState[key] : window.appState;
+            const chartKey = key.length === 1 ? 'chart' : key;
+            if (target?.[chartKey]) { target[chartKey].destroy(); target[chartKey] = null; }
+          });
+
+          const uiDefaults = { 'rowCount5': '0', 'statTotal': '0', 'statContractors': '0', 'cmpSouthTotal': '0' };
+          Object.entries(uiDefaults).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+          });
+
+          const search = document.getElementById('contractorSearch');
+          if (search) search.value = '';
+
+          const tbody = document.getElementById('zoneTableBody');
+          if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-slate-400 italic font-medium">Awaiting data upload...</td></tr>';
+
+          window.showToast('All datasets and charts have been reset');
+          window.switchTab('tab1');
+        };
+
+        // --- 5. CHARTS (SINGLE & SOUTH) ---
+        window.renderSingleChart = function(fileNum, data) {
+            document.getElementById(`rowCount${fileNum}`).textContent = data.length.toLocaleString();
+            const counts = {};
+            data.forEach(r => {
+                const g = r[window.appState[fileNum].govIdx];
+                counts[g] = (counts[g] || 0) + 1;
+            });
+            const labels = Object.values(window.govMapping).filter(l => counts[l]).sort( (a, b) => counts[b] - counts[a]);
+
+            if (window.appState[fileNum].chart) window.appState[fileNum].chart.destroy();
+            const ctx = document.getElementById(`canvas${fileNum}`).getContext('2d');
+            window.appState[fileNum].chart = new Chart(ctx,{
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: labels.map(l => counts[l]),
+                        backgroundColor: fileNum === '1' ? '#2563eb' : '#7c3aed',
+                        borderRadius: 12, barThickness: 24, categoryPercentage: 0.75
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', maintainAspectRatio: false,
+                    layout: { padding: { top: 8, bottom: 8, left: 5, right: 8 } },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end', align: 'right', offset: 12, color: '#64748b',
+                            font: (ctx) => ({ weight: '800', size: Number(ctx?.dataset?.data?.[ctx.dataIndex] || 0) >= 350 ? 15 : 11 })
+                        }
+                    },
+                    scales: {
+                        x: { display: false, grid: { display: false }, grace: '10%' },
+                        y: { grid: { display: false }, ticks: { font: { weight: '700' }, padding: 7 } }
+                    }
+                }
+            });
+        };
+
+        window.updateSouthConfigChart = function() {
+          const state = window.appState['1'];
+          if (!state.rows.length || state.zoneIdx === -1) {
+            document.getElementById('rowCount5').textContent = '0';
+            if (window.appState['5'].chart) { window.appState['5'].chart.destroy(); window.appState['5'].chart = null; }
+            return;
+          }
+
+          const southCodes = ['FTK', 'FBS', 'FNS', 'FMU', 'FAM'];
+          const southNames = { FTK: 'Salah aldin', FBS: 'Basrah', FNS: 'Thy Qar', FMU: 'Muthanna', FAM: 'Misan' };
+          const counts = { FTK: 0, FBS: 0, FNS: 0, FMU: 0, FAM: 0 };
+          let totalSouth = 0;
+
+          state.rows.forEach(r => {
+            const zone = (r[state.zoneIdx] || '').toUpperCase();
+            for (const code of southCodes) {
+              if (zone.startsWith(code)) { counts[code] += 1; totalSouth += 1; break; }
+            }
+          });
+
+          const sortType = document.getElementById('sortSouth')?.value || 'desc';
+          const sortedCodes = [...southCodes].sort((a, b) => sortType === 'asc' ? counts[a] - counts[b] : counts[b] - counts[a]);
+
+          document.getElementById('rowCount5').textContent = totalSouth.toLocaleString();
+          const ctx = document.getElementById('canvas5').getContext('2d');
+          if (window.appState['5'].chart) window.appState['5'].chart.destroy();
+
+          const palette = { FTK: '#0f766e', FBS: '#0d9488', FNS: '#14b8a6', FMU: '#2dd4bf', FAM: '#5eead4' };
+
+          window.appState['5'].chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: sortedCodes.map(c => `${c}: ${southNames[c]}`),
+              datasets: [{
+                data: sortedCodes.map(c => counts[c]),
+                backgroundColor: sortedCodes.map(c => palette[c]),
+                borderRadius: 6, barThickness: 25, categoryPercentage: 0.8
+              }]
+            },
+            options: {
+              indexAxis: 'y', maintainAspectRatio: false,
+              layout: { padding: { top: 10, bottom: 10, left: 10, right: 45 } },
+              plugins: {
+                legend: { display: false },
+                datalabels: {
+                  anchor: 'end', align: 'right', offset: 8, font: { weight: '900', size: 13 },
+                  color: (context) => context.dataset.backgroundColor[context.dataIndex],
+                  formatter: (value) => value.toLocaleString()
+                }
+              },
+              scales: {
+                x: { display: false, grace: '20%' },
+                y: { grid: { display: false }, ticks: { font: { weight: '700', size: 12 }, color: '#334155' } }
+              }
+            }
+          });
+        };
+
+        // --- 6. CHARTS (COMPARISON) ---
+        window.updateComparisonChart = function() {
+          if (!window.appState || !window.appState['1'] || !window.appState['2']) return;
+
+          const sortType = document.getElementById('sortComparison')?.value || 'desc';
+          const rows1 = window.appState['1'].rows || [];
+          const rows2 = window.appState['2'].rows || [];
+          const d1 = {}, d2 = {};
+
+          const processRows = (rows, govIdx, targetObj) => {
+            rows.forEach(r => {
+              if (!r) return; 
+              const val = r[govIdx];
+              if (val === undefined || val === null || val.toString().trim() === "") return; 
+              const label = val.toString().trim();
+              targetObj[label] = (targetObj[label] || 0) + 1;
+            });
+          };
+
+          processRows(rows1, window.appState['1'].govIdx, d1);
+          processRows(rows2, window.appState['2'].govIdx, d2);
+
+          const labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
+
+          if (labels.length === 0) {
+            ['cmpNewTotal', 'cmpPendingTotal', 'cmpCombinedTotal', 'cmpSouthTotal'].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.textContent = '0';
+            });
+            if (window.appState.comparisonChart) { window.appState.comparisonChart.destroy(); window.appState.comparisonChart = null; }
+            return;
+          }
+
+          labels.sort((a, b) => {
+            const newA = d1[a] || 0;
+            const newB = d1[b] || 0;
+            const pendingA = d2[a] || 0;
+            const pendingB = d2[b] || 0;
+
+            if (newA !== newB) {
+                return sortType === 'desc' ? newB - newA : newA - newB;
+            }
+            return sortType === 'desc' ? pendingB - pendingA : pendingA - pendingB;
+          });
+
+          const newTotal = Object.values(d1).reduce((a, b) => a + b, 0);
+          const pendingTotal = Object.values(d2).reduce((a, b) => a + b, 0);
+          
+          document.getElementById('cmpNewTotal').textContent = newTotal.toLocaleString();
+          document.getElementById('cmpPendingTotal').textContent = pendingTotal.toLocaleString();
+          document.getElementById('cmpCombinedTotal').textContent = (newTotal + pendingTotal).toLocaleString();
+
+          let southTotal = 0;
+          const southCodes = ['FTK', 'FBS', 'FNS', 'FMU', 'FAM'];
+          const countSouth = (rows, state) => {
+              if (!rows || state.zoneIdx === -1) return;
+              rows.forEach(r => {
+                  const zone = (r[state.zoneIdx] || '').toUpperCase();
+                  if (southCodes.some(c => zone.startsWith(c))) southTotal++;
+              });
+          };
+          countSouth(rows1, window.appState['1']);
+          
+          const southEl = document.getElementById('cmpSouthTotal');
+          if (southEl) southEl.textContent = southTotal.toLocaleString();
+
+          if (window.appState.comparisonChart) window.appState.comparisonChart.destroy();
+
+          const canvas = document.getElementById('canvasComparison');
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+
+          window.appState.comparisonChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                // تم تقليل categoryPercentage لزيادة المسافة بين المحافظات
+                // وتم ضبط barPercentage لإعطاء مسافة طفيفة بين العمودين لنفس المحافظة
+                { label: 'New User Acquisition', data: labels.map(l => d1[l] || 0), backgroundColor: '#2563eb', borderRadius: 8, barPercentage: 0.50, categoryPercentage: 0.70 },
+                { label: 'Pending Physical Install', data: labels.map(l => d2[l] || 0), backgroundColor: '#7c3aed', borderRadius: 8, barPercentage: 0.50, categoryPercentage: 0.70 }
+              ]
+            },
+            options: {
+              responsive: true,
+              indexAxis: 'y', maintainAspectRatio: false,
+              layout: { padding: { top: 20, bottom: 20, right: 12, left: 10 } },
+              plugins: {
+                legend: { 
+                  position: 'top', 
+                  align: 'center', 
+                  labels: { font: { weight: '900', size: 12 }, padding: 14, usePointStyle: true } 
+                },
+                datalabels: { anchor: 'end', align: 'right', offset: 5, font: { size: 11, weight: '900' }, formatter: v => v > 0 ? v.toLocaleString() : '', color: (context) => context.dataset.backgroundColor }
+              },
+              scales: {
+                x: { grid: { color: '#f1f5f9' }, border: { display: false }, grace: '18%', ticks: { display: false } },
+                y: { 
+                  grid: { display: false }, 
+                  border: { display: false }, 
+                  ticks: { font: { weight: '700', size: 11 }, padding: 15 } 
+                }
+              }
+            }
+          });
+        };
+
+        window.updateZoneContractorAnalysis = function() {
+          const tbody = document.getElementById('zoneTableBody');
+          const filterEl = document.getElementById('zoneGovFilter');
+          const totalEl = document.getElementById('statTotal');
+          const contractorEl = document.getElementById('statContractors');
+          const chartEl = document.getElementById('canvasZoneChart');
+
+          if (!tbody || !filterEl || !totalEl || !contractorEl || !chartEl) return;
+
+          const selectedGov = filterEl.value || 'all';
+          const search = (document.getElementById('contractorSearch')?.value || '').trim().toLowerCase();
+          tbody.innerHTML = '';
+
+          const state1 = window.appState['1'];
+          const state2 = window.appState['2'];
+          const hasData1 = state1.rows.length > 0 && state1.contractorIdx !== -1;
+          const hasData2 = state2.rows.length > 0 && state2.contractorIdx !== -1;
+
+          if (!hasData1 && !hasData2) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-slate-400 italic font-medium">Upload at least one valid dataset with Contractor and Zone columns.</td></tr>';
+            totalEl.textContent = '0'; contractorEl.textContent = '0';
+            if (window.appState.zoneChart) { window.appState.zoneChart.destroy(); window.appState.zoneChart = null; }
+            return;
+          }
+
+          const masterMap = {};
+          const processRows = (rows, type, state) => {
+            rows.forEach(r => {
+              const province = r[state.govIdx];
+              if (selectedGov !== 'all' && province !== selectedGov) return;
+              if (province === 'Other') return;
+
+              const contractor = (r[state.contractorIdx] || 'Non-Contracted').trim() || 'Non-Contracted';
+              if (search && !contractor.toLowerCase().includes(search)) return;
+              if (!masterMap[province]) masterMap[province] = {};
+              if (!masterMap[province][contractor]) masterMap[province][contractor] = { new: 0, pending: 0 };
+              masterMap[province][contractor][type] += 1;
+            });
+          };
+
+          if (hasData1) processRows(state1.rows, 'new', state1);
+          if (hasData2) processRows(state2.rows, 'pending', state2);
+
+          const sortedZones = Object.keys(masterMap).sort();
+          if (sortedZones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-slate-400 italic font-medium">No results found for current filter.</td></tr>';
+            totalEl.textContent = '0'; contractorEl.textContent = '0';
+            if (window.appState.zoneChart) { window.appState.zoneChart.destroy(); window.appState.zoneChart = null; }
+            return;
+          }
+
+          const chartData = { labels: [], newUsers: [], pendingUsers: [] };
+          let totalUnitCount = 0;
+          let contractorCount = 0;
+
+          sortedZones.forEach(zoneName => {
+            const contractorNames = Object.keys(masterMap[zoneName]).sort((a, b) => {
+              const newA = masterMap[zoneName][a].new;
+              const newB = masterMap[zoneName][b].new;
+              const pendingA = masterMap[zoneName][a].pending;
+              const pendingB = masterMap[zoneName][b].pending;
+
+              if (newA !== newB) return newB - newA; 
+              return pendingB - pendingA; 
+            });
+
+            contractorNames.forEach(contractorName => {
+              const stats = masterMap[zoneName][contractorName];
+              const rowTotal = stats.new + stats.pending;
+              totalUnitCount += rowTotal;
+              contractorCount += 1;
+
+              if (chartData.labels.length < 15) {
+                chartData.labels.push(contractorName.length > 22 ? `${contractorName.substring(0, 20)}...` : contractorName);
+                chartData.newUsers.push(stats.new);
+                chartData.pendingUsers.push(stats.pending);
+              }
+
+              const tr = document.createElement('tr');
+              tr.className = 'hover:bg-slate-50 transition-colors group';
+              tr.innerHTML = `
+                <td class="px-8 py-5">
+                  <span class="block text-[9px] font-black text-blue-500 uppercase tracking-tighter mb-1">${zoneName}</span>
+                  <span class="text-slate-900 font-bold">${contractorName}</span>
+                </td>
+                <td class="px-6 py-5 text-center font-bold text-blue-600">${stats.new.toLocaleString()}</td>
+                <td class="px-6 py-5 text-center font-bold text-purple-600">${stats.pending.toLocaleString()}</td>
+                <td class="px-8 py-5 text-center font-black text-slate-900 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white transition-all">${rowTotal.toLocaleString()}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+          });
+
+          totalEl.textContent = totalUnitCount.toLocaleString();
+          contractorEl.textContent = contractorCount.toLocaleString();
+
+          if (window.appState.zoneChart) window.appState.zoneChart.destroy();
+          const ctx = chartEl.getContext('2d');
+          window.appState.zoneChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: chartData.labels,
+              datasets: [
+                { label: 'New', data: chartData.newUsers, backgroundColor: '#2563eb', barThickness: 18, categoryPercentage: 0.62 },
+                { label: 'Pending', data: chartData.pendingUsers, backgroundColor: '#7c3aed', barThickness: 18, categoryPercentage: 0.62 }
+              ]
+            },
+            options: {
+              indexAxis: 'y', maintainAspectRatio: false,
+              layout: { padding: { top: 12, bottom: 12, left: 10, right: 10 } },
+              plugins: {
+                legend: { position: 'bottom', align: 'end', labels: { font: { weight: '700' }, boxWidth: 12 } },
+                datalabels: { color: '#fff', font: { size: 9, weight: '900' }, formatter: v => v > 0 ? v : '' }
+              },
+              scales: {
+                x: { stacked: true, display: false, grace: '5%' },
+                y: { stacked: true, grid: { display: false }, ticks: { font: { weight: '700', size: 11 }, padding: 10 } }
+              }
+            }
+          });
+        };
+
+        // --- 7. MAIN INITIALIZATION ---
+        Chart.register(ChartDataLabels);
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        Chart.defaults.font.size = 12;
+
+        window.addEventListener('load', () => {
+          window.switchTab('tab1');
+        });
+    </script>
+</body>
+</html>
