@@ -51,7 +51,7 @@ window.updateComparisonChart = function() {
     }
     return;
   }
-
+/*
   // 3. ترتيب البيانات بناءً على المجموع أو الأبجدية
   labels.sort((a, b) => {
     const totalA = (d1[a] || 0) + (d2[a] || 0);
@@ -59,7 +59,21 @@ window.updateComparisonChart = function() {
     if (totalA === totalB) return a.localeCompare(b);
     return sortType === 'desc' ? totalB - totalA : totalA - totalB;
   });
-
+  */
+  // الترتيب بناءً على New Users أولاً، ثم Pending كعامل ثانوي
+  labels.sort((a, b) => {
+    const newA = d1[a] || 0;
+    const newB = d1[b] || 0;
+    const pendingA = d2[a] || 0;
+    const pendingB = d2[b] || 0;
+  
+    if (newA !== newB) {
+      return sortType === 'desc' ? newB - newA : newA - newB;
+    }
+    // إذا تساوى المستخدمون الجدد، يتم الترتيب حسب قيد الانتظار
+    return sortType === 'desc' ? pendingB - pendingA : pendingA - pendingB;
+  });
+  
   // 4. تحديث الأرقام الإجمالية في واجهة المستخدم (للبيانات الصالحة فقط)
   const newTotal = Object.values(d1).reduce((a, b) => a + b, 0);
   const pendingTotal = Object.values(d2).reduce((a, b) => a + b, 0);
