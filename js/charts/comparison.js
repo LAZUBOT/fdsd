@@ -127,7 +127,7 @@ window.updateComparisonChart = function() {
       plugins: {
         legend: { 
           position: 'top', 
-          align: 'start', 
+          align: 'center', 
           labels: { font: { weight: '700', size: 12 }, padding: 18, usePointStyle: true } 
         },
         datalabels: {
