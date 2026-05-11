@@ -2,207 +2,200 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EL Analyzer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <title>EL Enterprise Analyzer</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 
         :root {
-          --primary: #2563eb;
-          --secondary: #7c3aed;
-          --accent: #14b8a6;
           --font-main: 'Plus Jakarta Sans', sans-serif;
           --font-arabic: 'Noto Sans Arabic', 'Inter', sans-serif;
+          --bg-app: #f4f4f5;
         }
 
         body {
           font-family: var(--font-main);
-          background-color: #f1f5f9;
+          background-color: var(--bg-app);
           color: #0f172a;
           -webkit-tap-highlight-color: transparent;
+          overscroll-behavior-y: none;
         }
 
-        .font-arabic {
-            font-family: var(--font-arabic);
+        .font-arabic { font-family: var(--font-arabic); }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .app-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .glass-nav {
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        .app-card {
+            background: #ffffff;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(226, 232, 240, 0.6);
+            box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-
-        .tab-btn { position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
-        .tab-btn:hover { color: var(--primary); }
-        .tab-active { color: var(--primary) !important; font-weight: 800 !important; }
-        .tab-active::after {
-          content: '';
-          position: absolute;
-          bottom: -4px;
-          left: 0;
-          width: 100%;
-          height: 3px;
-          background: var(--primary);
-          border-radius: 10px;
-        }
-        #btn-tab6.tab-active::after { background: #ea580c; } /* Orange indicator for Tab 6 */
-
-        .card-shadow { box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); }
-        .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1); }
 
         #toast {
           visibility: hidden;
-          min-width: 280px;
-          background-color: #0f172a;
+          min-width: 250px;
+          background-color: #1e293b;
           color: #fff;
           text-align: center;
-          border-radius: 16px;
-          padding: 16px;
+          border-radius: 100px;
+          padding: 12px 20px;
           position: fixed;
           z-index: 1000;
           left: 50%;
-          bottom: 40px;
+          bottom: max(20px, env(safe-area-inset-bottom));
           transform: translateX(-50%);
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
           font-weight: 600;
+          font-size: 13px;
         }
-        #toast.show { visibility: visible; animation: fadein 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), fadeout 0.4s 2.6s forwards; }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        #toast.show { visibility: visible; animation: fadein 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), fadeout 0.3s 2.7s forwards; }
 
         .chart-container { position: relative; width: 100%; height: 500px; }
+        .bg-south { background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); }
 
-        .bg-south { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
-
-        /* --- Tab 6 (Export Pending) Specific Styles --- */
-        .checkbox-group-container { max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 1rem; background: #fff; }
-        .checkbox-item { display: flex; align-items: center; padding: 0.6rem 1rem; border-bottom: 1px solid #f8fafc; cursor: pointer; transition: background 0.15s; }
+        .checkbox-group-container { max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 1rem; background: #fafafa; }
+        .checkbox-item { display: flex; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.15s; }
         .checkbox-item:last-child { border-bottom: none; }
-        .checkbox-item:hover { background-color: #f1f5f9; }
-        .checkbox-item input[type='checkbox'] { width: 1.1rem; height: 1.1rem; margin-left: 0.75rem; flex-shrink: 0; accent-color: var(--primary); }
-        .group-btn { transition: all 0.2s; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 0.75rem; font-size: 0.825rem; font-weight: 600; white-space: nowrap; cursor: pointer; background: white; color: #475569; }
-        .group-btn:hover { border-color: #cbd5e1; background: #f8fafc; }
-        .group-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.3); }
+        .checkbox-item:active { background-color: #e2e8f0; }
+        .checkbox-item input[type='checkbox'] { width: 1.25rem; height: 1.25rem; margin-left: 0.75rem; flex-shrink: 0; accent-color: #2563eb; }
         
-        .table-container { max-height: 500px; overflow: auto; border-radius: 1rem; line-height: 1.35; }
-        .table-container table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85rem; table-layout: auto; }
-        .table-container th { position: sticky; top: 0; background: #0f172a; color: white; z-index: 10; padding: 14px 16px; text-align: right; white-space: nowrap; font-weight: 700; }
-        .table-container td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; white-space: normal; word-break: break-word; overflow-wrap: anywhere; vertical-align: middle; color: #334155; font-weight: 500; }
-        .table-container tr:last-child td { border-bottom: none; }
-        .table-container tbody tr { transition: background-color 0.15s; }
-        .table-container tbody tr:hover { background-color: #f8fafc; }
-        
-        .pagination-btn { padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; font-size: 0.875rem; transition: all 0.2s; background: white; font-weight: 600; color: #475569; }
-        .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
-        .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; background: #f8fafc; }
-        .select-all-btn { font-size: 0.75rem; color: #2563eb; cursor: pointer; background: none; border: none; padding: 0; margin-left: 8px; font-weight: 700; transition: color 0.2s; }
-        .select-all-btn:hover { color: #1d4ed8; text-decoration: underline; }
+        .group-btn { border: 1px solid #e2e8f0; padding: 0.6rem 1rem; border-radius: 100px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; cursor: pointer; background: white; color: #475569; transition: all 0.2s; }
+        .group-btn:active { transform: scale(0.95); }
+        .group-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25); }
 
-        @media (max-width: 640px) {
-          .chart-container { height: 360px; }
-          #chartExportArea { height: 520px !important; padding: 1rem !important; }
-          #zoneExportArea .h-[400px] { height: 300px !important; }
-          .tab-btn { font-size: 12px; padding: 8px 10px; }
-          #toast { min-width: 220px; bottom: 20px; }
-        }
+        .table-container { max-height: 450px; overflow: auto; border-radius: 1rem; border: 1px solid #e2e8f0; }
+        .table-container table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
+        .table-container th { position: sticky; top: 0; background: #f8fafc; color: #475569; z-index: 10; padding: 12px 16px; text-align: right; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+        .table-container td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #1e293b; font-weight: 600; }
+        .table-container tr:last-child td { border-bottom: none; }
+
+        .pagination-btn { padding: 0.5rem 1rem; border-radius: 100px; font-size: 0.85rem; font-weight: 700; color: #475569; background: #f1f5f9; transition: all 0.2s; }
+        .pagination-btn:active:not(:disabled) { transform: scale(0.95); background: #e2e8f0; }
+        .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .select-all-btn { font-size: 0.7rem; color: #2563eb; cursor: pointer; background: none; border: none; padding: 0; margin-left: 8px; font-weight: 800; }
 
         @media (max-width: 768px) {
-          main.max-w-7xl { padding-left: 1rem !important; padding-right: 1rem !important; }
-          .card-shadow { box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04); }
-          .glass-nav .max-w-7xl { padding-left: 1rem !important; padding-right: 1rem !important; }
-          .glass-nav .flex.items-center.gap-1 { gap: 0.35rem !important; }
-          .tab-btn { min-height: 38px; border-radius: 0.75rem; }
-          .chart-container { height: 340px !important; }
-          #chartExportArea { height: 500px !important; }
-          #zoneExportArea .h-\[400px\] { height: 280px !important; }
+            main.max-w-7xl { padding: 0.75rem !important; margin-top: 0 !important; }
+            .app-card { border-radius: 1.25rem; padding: 1.25rem !important; margin-bottom: 1rem; }
+            .chart-container { height: 320px !important; }
+            #chartExportArea { height: 400px !important; }
+            #zoneExportArea .h-\[400px\] { height: 300px !important; }
+            .table-container th, .table-container td { padding: 10px 12px; font-size: 0.75rem; }
         }
 
-        @media (max-width: 480px) {
-          body { font-size: 13px; }
-          .tab-btn { font-size: 11px !important; padding: 7px 10px !important; }
-          .chart-container { height: 300px !important; }
-          #chartExportArea { height: 430px !important; padding: 0.75rem !important; }
-          #zoneExportArea .h-\[400px\] { height: 240px !important; }
-          #toast { min-width: 190px; font-size: 12px; padding: 12px; bottom: 14px; }
-        }
-
-        @keyframes fadein {
-            from { bottom: 0; opacity: 0; transform: translate(-50%, 20px); } 
-            to { bottom: 40px; opacity: 1; transform: translate(-50%, 0); }
-        }
-        @keyframes fadeout {
-            from { bottom: 40px; opacity: 1; transform: translate(-50%, 0); } 
-            to { bottom: 0; opacity: 0; transform: translate(-50%, 20px); }
-        }
+        @keyframes fadein { from { bottom: 0; opacity: 0; transform: translate(-50%, 20px); } to { bottom: max(20px, env(safe-area-inset-bottom)); opacity: 1; transform: translate(-50%, 0); } }
+        @keyframes fadeout { from { bottom: max(20px, env(safe-area-inset-bottom)); opacity: 1; transform: translate(-50%, 0); } to { bottom: 0; opacity: 0; transform: translate(-50%, 20px); } }
     </style>
 </head>
-<body class="min-h-screen pb-16">
+<body class="pb-10 pt-safe">
 
     <div id="toast">Message</div>
 
-    <nav class="glass-nav sticky top-0 z-50 transition-all">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
+    <nav class="app-header">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex items-center justify-between px-4 py-3 sm:px-6">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/30">EL</div>
+                    <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-md shadow-blue-500/30">EL</div>
                     <div class="flex flex-col">
-                        <span class="text-lg font-extrabold tracking-tight text-slate-900 leading-none">Data Analyzer</span>
-                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Operational Intel v2.1</span>
+                        <span class="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 leading-none">Enterprise Analyzer</span>
+                        <span class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Mobile Intel v3.0</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-1 sm:gap-4 overflow-x-auto w-full md:w-auto px-2 pb-1 custom-scrollbar">
-                    <button onclick="switchTab('tab1')" id="btn-tab1" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold tab-active">New Users</button>
-                    <button onclick="switchTab('tab2')" id="btn-tab2" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Pending Installs</button>
-                    <button onclick="switchTab('tab5')" id="btn-tab5" class="tab-btn px-4 py-2 text-sm text-teal-600 whitespace-nowrap font-bold">South&SD</button>
-                    <button onclick="switchTab('tab3')" id="btn-tab3" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Market Share</button>
-                    <button onclick="switchTab('tab4')" id="btn-tab4" class="tab-btn px-4 py-2 text-sm text-slate-500 whitespace-nowrap font-semibold">Contractor Drill-down</button>
-                    <button onclick="switchTab('tab6')" id="btn-tab6" class="tab-btn px-4 py-2 text-sm text-orange-600 whitespace-nowrap font-bold">Export Pending</button>
-                    <button onclick="resetAllData()" class="ml-auto md:ml-2 px-5 py-2.5 text-xs bg-slate-100 text-slate-700 rounded-xl font-bold whitespace-nowrap hover:bg-slate-200 active:scale-95 transition-all shadow-sm">Reset Data</button>
+                <div>
+                    <button onclick="resetAllData()" class="p-2 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 active:scale-90 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    </button>
                 </div>
+            </div>
+            
+            <div class="px-2 sm:px-4 pb-3 flex items-center gap-2 overflow-x-auto hide-scrollbar snap-x">
+                <button onclick="switchTab('tab1')" id="btn-tab1" class="tab-btn snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    New Users
+                </button>
+                <button onclick="switchTab('tab2')" id="btn-tab2" class="tab-btn snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Pending Installs
+                </button>
+                <button onclick="switchTab('tab5')" id="btn-tab5" class="tab-btn snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    South&SD
+                </button>
+                <button onclick="switchTab('tab3')" id="btn-tab3" class="tab-btn snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055zM20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+                    Market Share
+                </button>
+                <button onclick="switchTab('tab4')" id="btn-tab4" class="tab-btn snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    Contractor
+                </button>
+                <button onclick="switchTab('tab6')" id="btn-tab6" class="tab-btn snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all bg-white text-slate-600 border border-slate-200 font-arabic">
+                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Export Pending
+                </button>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-6 mt-8">
+    <main class="max-w-7xl mx-auto sm:px-6 mt-6">
+        
         <!-- Tab 1: New Users -->
         <div id="tab1" class="tab-content transition-opacity duration-300">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div class="lg:col-span-1 space-y-6">
-                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow transition-all">
-                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-5">Input Data</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div class="lg:col-span-1 space-y-4 sm:space-y-6">
+                    <div class="app-card p-6">
+                        <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-4">Input Data</h3>
                         <div class="relative group">
                             <input type="file" id="fileInput1" onchange="handleFileUpload(event, '1')" accept=".csv" class="hidden" />
-                            <label for="fileInput1" class="flex flex-col items-center justify-center w-full p-8 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50/50 group-hover:border-blue-400 group-hover:bg-blue-50/50 transition-all">
-                                <svg class="w-10 h-10 text-blue-500 mb-3 transition-transform group-hover:scale-110 group-hover:-translate-y-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                                <span class="text-sm font-bold text-slate-600 group-hover:text-blue-700">Upload CSV</span>
+                            <label for="fileInput1" class="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-blue-200 rounded-2xl cursor-pointer bg-blue-50/30 group-hover:border-blue-500 group-hover:bg-blue-50 transition-all active:scale-95">
+                                <div class="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3">
+                                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                </div>
+                                <span class="text-sm font-extrabold text-blue-700">Upload CSV</span>
                             </label>
                         </div>
                         <div id="filterArea1" class="hidden mt-6 space-y-4">
-                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1 block">Filter Province</label>
-                            <select id="govFilter1" onchange="applyFilter('1')" class="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-slate-700"></select>
-                            
-                            <button onclick="exportProvinceData('1')" class="w-full px-4 py-3.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-xl text-xs font-black uppercase tracking-wide hover:bg-blue-100 active:scale-95 transition-all shadow-sm">Download Province Data</button>
-                            
-                            <div class="pt-6 mt-2 border-t border-slate-100">
-                                <div class="bg-gradient-to-br from-blue-600 to-blue-700 py-5 px-2 flex flex-col items-center justify-center text-center rounded-2xl text-white shadow-xl shadow-blue-500/20 hover-lift">
-                                    <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">Live Count</p>
-                                    <p id="rowCount1" class="text-4xl font-black mt-1 tracking-tight">0</p>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-1">Province Filter</label>
+                                <select id="govFilter1" onchange="applyFilter('1')" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50/50 font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-slate-700"></select>
+                            </div>
+                            <button onclick="exportProvinceData('1')" class="w-full px-4 py-3 bg-blue-50 text-blue-700 border border-blue-100 rounded-xl text-xs font-black uppercase tracking-wide hover:bg-blue-100 active:scale-95 transition-all">Download Data</button>
+                            <div class="pt-4 border-t border-slate-100">
+                                <div class="bg-gradient-to-br from-blue-600 to-blue-700 py-4 px-2 flex flex-col items-center justify-center text-center rounded-xl text-white shadow-lg shadow-blue-500/30">
+                                    <p class="text-[9px] font-bold text-blue-100 uppercase tracking-widest">Live Count</p>
+                                    <p id="rowCount1" class="text-3xl font-black mt-0.5 text-white">0</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="lg:col-span-3 bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow chart-container transition-all">
+                <div class="lg:col-span-3 app-card p-6 chart-container">
                     <canvas id="canvas1"></canvas>
                 </div>
             </div>
@@ -210,33 +203,35 @@
 
         <!-- Tab 2: Pending Installs -->
         <div id="tab2" class="tab-content hidden transition-opacity duration-300">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div class="lg:col-span-1 space-y-6">
-                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow transition-all">
-                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-5">Input Data</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div class="lg:col-span-1 space-y-4 sm:space-y-6">
+                    <div class="app-card p-6">
+                        <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-4">Input Data</h3>
                         <div class="relative group">
                             <input type="file" id="fileInput2" onchange="handleFileUpload(event, '2')" accept=".csv" class="hidden" />
-                            <label for="fileInput2" class="flex flex-col items-center justify-center w-full p-8 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50/50 group-hover:border-purple-400 group-hover:bg-purple-50/50 transition-all">
-                                <svg class="w-10 h-10 text-purple-500 mb-3 transition-transform group-hover:scale-110 group-hover:-translate-y-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                                <span class="text-sm font-bold text-slate-600 group-hover:text-purple-700">Upload CSV</span>
+                            <label for="fileInput2" class="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-purple-200 rounded-2xl cursor-pointer bg-purple-50/30 group-hover:border-purple-500 group-hover:bg-purple-50 transition-all active:scale-95">
+                                <div class="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3">
+                                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                </div>
+                                <span class="text-sm font-extrabold text-purple-700">Upload CSV</span>
                             </label>
                         </div>
                         <div id="filterArea2" class="hidden mt-6 space-y-4">
-                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1 block">Filter Province</label>
-                            <select id="govFilter2" onchange="applyFilter('2')" class="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-purple-500/20 transition-all text-slate-700"></select>
-                            
-                            <button onclick="exportProvinceData('2')" class="w-full px-4 py-3.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-xl text-xs font-black uppercase tracking-wide hover:bg-purple-100 active:scale-95 transition-all shadow-sm">Download Province Data</button>
-                            
-                            <div class="pt-6 mt-2 border-t border-slate-100">
-                                <div class="bg-gradient-to-br from-purple-600 to-purple-700 py-5 px-2 flex flex-col items-center justify-center text-center rounded-2xl text-white shadow-xl shadow-purple-500/20 hover-lift">
-                                    <p class="text-[10px] font-black opacity-80 uppercase tracking-widest">Pending Count</p>
-                                    <p id="rowCount2" class="text-4xl font-black mt-1 tracking-tight">0</p>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-1">Province Filter</label>
+                                <select id="govFilter2" onchange="applyFilter('2')" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50/50 font-bold outline-none focus:ring-2 focus:ring-purple-500/20 transition-all text-slate-700"></select>
+                            </div>
+                            <button onclick="exportProvinceData('2')" class="w-full px-4 py-3 bg-purple-50 text-purple-700 border border-purple-100 rounded-xl text-xs font-black uppercase tracking-wide hover:bg-purple-100 active:scale-95 transition-all">Download Data</button>
+                            <div class="pt-4 border-t border-slate-100">
+                                <div class="bg-gradient-to-br from-purple-600 to-purple-700 py-4 px-2 flex flex-col items-center justify-center text-center rounded-xl text-white shadow-lg shadow-purple-500/30">
+                                    <p class="text-[9px] font-bold text-purple-100 uppercase tracking-widest">Pending Count</p>
+                                    <p id="rowCount2" class="text-3xl font-black mt-0.5 text-white">0</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="lg:col-span-3 bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow chart-container transition-all">
+                <div class="lg:col-span-3 app-card p-6 chart-container">
                     <canvas id="canvas2"></canvas>
                 </div>
             </div>
@@ -244,32 +239,32 @@
 
         <!-- Tab 5: South&SD -->
         <div id="tab5" class="tab-content hidden transition-opacity duration-300">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div class="lg:col-span-1 space-y-6">
-                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow transition-all">
-                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 text-teal-600">Infrastructure Config</h3>
-                        <p class="text-xs text-slate-500 mb-6 font-medium leading-relaxed">Automatic classification for FTK, FBS, FNS, FMU, FAM sites.</p>
-                        <div class="pt-6 border-t border-slate-100">
-                            <div class="bg-south py-6 px-2 flex flex-col items-center justify-center text-center rounded-2xl text-white shadow-xl shadow-teal-500/20 hover-lift">
-                                <p class="text-[10px] font-black opacity-90 uppercase tracking-widest mb-1">South Region Focus</p>
-                                <p id="rowCount5" class="text-5xl font-black tracking-tight">0</p>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div class="lg:col-span-1 space-y-4 sm:space-y-6">
+                    <div class="app-card p-6">
+                        <h3 class="text-sm font-black text-teal-700 uppercase tracking-wider mb-2">Infra Config</h3>
+                        <p class="text-[11px] text-slate-500 font-medium leading-relaxed mb-6">Auto-classification for FTK, FBS, FNS, FMU, FAM sites.</p>
+                        <div class="bg-south py-5 px-4 rounded-2xl text-white shadow-lg shadow-teal-600/30 flex items-center justify-between">
+                            <div>
+                                <p class="text-[10px] font-bold opacity-90 uppercase tracking-wider">South Focus</p>
+                                <p class="text-[10px] opacity-70">Total Count</p>
                             </div>
+                            <p id="rowCount5" class="text-3xl font-black tracking-tight text-white">0</p>
                         </div>
                     </div>
                 </div>
-                <div class="lg:col-span-3 bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow chart-container transition-all">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                        <h3 class="text-xl font-black text-slate-900 tracking-tight">South Configuration Distribution</h3>
-                        <div class="flex flex-wrap items-center gap-3" data-html2canvas-ignore="true">
-                            <select id="sortSouth" onchange="updateSouthConfigChart()" class="p-2.5 border border-slate-200 rounded-xl text-sm font-bold bg-slate-50 outline-none text-slate-700 focus:ring-2 focus:ring-teal-500/20">
-                                <option value="desc">Sort: High to Low</option>
-                                <option value="asc">Sort: Low to High</option>
+                <div class="lg:col-span-3 app-card p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h3 class="text-lg font-black text-slate-900 tracking-tight">Distribution Analysis</h3>
+                        <div class="flex items-center gap-2 w-full sm:w-auto" data-html2canvas-ignore="true">
+                            <select id="sortSouth" onchange="updateSouthConfigChart()" class="flex-1 sm:flex-none p-2 border border-slate-200 rounded-lg text-xs font-bold bg-slate-50 outline-none text-slate-700">
+                                <option value="desc">High to Low</option>
+                                <option value="asc">Low to High</option>
                             </select>
-                            <button onclick="exportChartAsImage('southExportArea')" class="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-black text-sm hover:bg-teal-700 active:scale-95 transition-all shadow-lg shadow-teal-500/30">Export PNG</button>
-                            <span class="hidden sm:inline-block px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-teal-100">Live Analysis</span>
+                            <button onclick="exportChartAsImage('southExportArea')" class="flex-1 sm:flex-none p-2 bg-teal-600 text-white rounded-lg font-bold text-xs hover:bg-teal-700 active:scale-95 transition-all text-center">Save PNG</button>
                         </div>
                     </div>
-                    <div id="southExportArea" class="h-full w-full bg-white relative">
+                    <div id="southExportArea" class="w-full chart-container bg-white relative">
                         <canvas id="canvas5"></canvas>
                     </div>
                 </div>
@@ -278,60 +273,43 @@
 
         <!-- Tab 3: Market Share -->
         <div id="tab3" class="tab-content hidden transition-opacity duration-300">
-            <div id="fullMarketReport" class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow transition-all">
-                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+            <div id="fullMarketReport" class="app-card p-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div data-html2canvas-ignore="true">
-                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Market Comparison</h3>
-                        <p class="text-slate-500 font-medium text-sm mt-1">Correlation between New Users and Pending Installs</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight">Market Comparison</h3>
+                        <p class="text-slate-500 font-medium text-[11px] mt-0.5">Correlation: New vs Pending</p>
                     </div>
-                    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto" data-html2canvas-ignore="true">
-                        <select id="sortComparison" onchange="updateComparisonChart()" class="p-3.5 border border-slate-200 rounded-2xl text-sm font-bold bg-slate-50 outline-none text-slate-700 focus:ring-2 focus:ring-blue-500/20 flex-1 lg:flex-none">
-                            <option value="desc">Sort: High to Low</option>
-                            <option value="asc">Sort: Low to High</option>
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto" data-html2canvas-ignore="true">
+                        <select id="sortComparison" onchange="updateComparisonChart()" class="flex-1 sm:flex-none p-2 border border-slate-200 rounded-lg text-xs font-bold bg-slate-50 outline-none">
+                            <option value="desc">High to Low</option>
+                            <option value="asc">Low to High</option>
                         </select>
-                        <button onclick="exportComparisonData()" class="px-6 py-3.5 bg-emerald-600 text-white rounded-2xl font-black text-sm hover:bg-emerald-700 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 whitespace-nowrap flex-1 lg:flex-none">Excel</button>
-                        <button onclick="exportChartAsImage('fullMarketReport')" class="px-6 py-3.5 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/30 whitespace-nowrap flex-1 lg:flex-none">Export Image</button>
+                        <button onclick="exportComparisonData()" class="flex-1 sm:flex-none p-2 bg-slate-900 text-white rounded-lg font-bold text-xs active:scale-95 transition-all text-center">Excel</button>
+                        <button onclick="exportChartAsImage('fullMarketReport')" class="w-full sm:w-auto p-2 bg-blue-600 text-white rounded-lg font-bold text-xs active:scale-95 transition-all text-center mt-2 sm:mt-0">Image</button>
                     </div>
                 </div>
                 
-                <div id="marketStatsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 transition-all duration-300">
-                    <!-- الكرت المدمج للشبكة الكلية -->
-                    <div class="py-4 px-5 flex flex-col rounded-2xl bg-white border border-slate-200 shadow-sm hover-lift">
-                        <p class="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-3 text-center border-b border-slate-100 pb-2">All Regions</p>
-                        <div class="flex justify-around items-center h-full">
-                            <div class="text-center px-2">
-                                <p class="text-[10px] font-bold text-blue-500 uppercase tracking-wide mb-1">New</p>
-                                <p id="cmpNewTotal" class="text-xl font-black text-blue-700 leading-none">0</p>
-                            </div>
-                            <div class="w-px h-8 bg-slate-200"></div>
-                            <div class="text-center px-2">
-                                <p class="text-[10px] font-bold text-purple-500 uppercase tracking-wide mb-1">Pending</p>
-                                <p id="cmpPendingTotal" class="text-xl font-black text-purple-700 leading-none">0</p>
-                            </div>
+                <div id="marketStatsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                    <div class="py-3 px-4 flex flex-col rounded-xl bg-slate-50 border border-slate-100">
+                        <p class="text-[10px] uppercase font-black text-slate-500 mb-2 border-b border-slate-200 pb-1">All Regions</p>
+                        <div class="flex justify-between items-center">
+                            <div><p class="text-[9px] font-bold text-blue-600 uppercase">New</p><p id="cmpNewTotal" class="text-base font-black text-blue-700">0</p></div>
+                            <div><p class="text-[9px] font-bold text-purple-600 uppercase text-right">Pending</p><p id="cmpPendingTotal" class="text-base font-black text-purple-700 text-right">0</p></div>
                         </div>
                     </div>
-                    <!-- الكرت المدمج لإقليم الجنوب -->
-                    <div class="py-4 px-5 flex flex-col rounded-2xl bg-teal-50 border border-teal-100 shadow-sm hover-lift">
-                        <p class="text-[11px] uppercase font-black text-teal-600/80 tracking-widest mb-3 text-center border-b border-teal-200/60 pb-2">South&SD Focus</p>
-                        <div class="flex justify-around items-center h-full">
-                            <div class="text-center px-2">
-                                <p class="text-[10px] font-bold text-teal-600 uppercase tracking-wide mb-1">New</p>
-                                <p id="cmpSouthNew" class="text-xl font-black text-teal-800 leading-none">0</p>
-                            </div>
-                            <div class="w-px h-8 bg-teal-200/60"></div>
-                            <div class="text-center px-2">
-                                <p class="text-[10px] font-bold text-teal-600 uppercase tracking-wide mb-1">Pending</p>
-                                <p id="cmpSouthPending" class="text-xl font-black text-teal-800 leading-none">0</p>
-                            </div>
+                    <div class="py-3 px-4 flex flex-col rounded-xl bg-teal-50 border border-teal-100">
+                        <p class="text-[10px] uppercase font-black text-teal-700 mb-2 border-b border-teal-200 pb-1">South Focus</p>
+                        <div class="flex justify-between items-center">
+                            <div><p class="text-[9px] font-bold text-teal-600 uppercase">New</p><p id="cmpSouthNew" class="text-base font-black text-teal-700">0</p></div>
+                            <div><p class="text-[9px] font-bold text-teal-600 uppercase text-right">Pending</p><p id="cmpSouthPending" class="text-base font-black text-teal-700 text-right">0</p></div>
                         </div>
                     </div>
-                    <!-- كرت الإجمالي الكلي -->
-                    <div class="py-4 px-5 flex flex-col items-center justify-center text-center rounded-2xl bg-slate-50 border border-slate-200 shadow-sm hover-lift" data-html2canvas-ignore="true">
-                        <p class="text-[11px] uppercase font-black text-slate-500 tracking-widest mb-2">Total Combined</p>
-                        <p id="cmpCombinedTotal" class="text-3xl font-black text-slate-900 tracking-tight">0</p>
+                    <div class="py-3 px-4 flex flex-col justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20" data-html2canvas-ignore="true">
+                        <p class="text-[10px] uppercase font-bold text-blue-200 mb-0.5">Total Combined</p>
+                        <p id="cmpCombinedTotal" class="text-2xl font-black text-white">0</p>
                     </div>
                 </div>
-                <div id="chartExportArea" class="w-full h-[500px] relative">
+                <div id="chartExportArea" class="w-full chart-container relative">
                     <canvas id="canvasComparison"></canvas>
                 </div>
             </div>
@@ -339,55 +317,53 @@
 
         <!-- Tab 4: Contractor Drill-down -->
         <div id="tab4" class="tab-content hidden transition-opacity duration-300">
-            <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow transition-all">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-slate-100 pb-6">
+            <div class="app-card p-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-slate-100 pb-4">
                     <div>
-                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Contractor Matrix</h3>
-                        <p class="text-slate-500 font-medium text-sm mt-1">Granular analysis of operations per province</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight">Contractor Matrix</h3>
+                        <p class="text-slate-500 font-medium text-[11px] mt-0.5">Granular analysis per province</p>
                     </div>
-                    <div class="flex flex-wrap gap-3 w-full md:w-auto" data-html2canvas-ignore="true">
-                        <button onclick="exportToExcel()" class="flex-1 md:flex-none px-6 py-3.5 bg-emerald-600 text-white rounded-2xl font-black text-sm whitespace-nowrap shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 active:scale-95 transition-all">Excel</button>
-                        <button onclick="exportChartAsImage('zoneExportArea')" class="flex-1 md:flex-none px-6 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-sm whitespace-nowrap shadow-lg shadow-slate-900/20 hover:bg-slate-800 active:scale-95 transition-all">Save Graphic</button>
-                    </div>
-                </div>
-
-                <div class="mb-8 p-6 bg-slate-50 rounded-3xl border border-slate-100 flex flex-wrap lg:flex-nowrap items-center gap-5" data-html2canvas-ignore="true">
-                    <div class="w-full md:w-auto flex-1">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 tracking-wider">Focus Province</label>
-                        <select id="zoneGovFilter" onchange="updateZoneContractorAnalysis()" class="w-full p-3.5 border border-slate-200 rounded-xl bg-white font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"></select>
-                    </div>
-
-                    <div class="w-full md:w-auto flex-1">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 tracking-wider">Search Contractor</label>
-                        <input id="contractorSearch" oninput="updateZoneContractorAnalysis()" placeholder="Type contractor name..." class="w-full p-3.5 border border-slate-200 rounded-xl bg-white font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" />
+                    <div class="flex gap-2 w-full sm:w-auto" data-html2canvas-ignore="true">
+                        <button onclick="exportToExcel()" class="flex-1 p-2 bg-emerald-600 text-white rounded-lg font-bold text-xs active:scale-95 transition-all text-center">Export Excel</button>
                     </div>
                 </div>
 
-                <div class="flex flex-wrap gap-4 mb-8">
-                     <div class="py-4 px-5 flex flex-col items-center justify-center text-center bg-white rounded-2xl border border-slate-200 shadow-sm flex-1 min-w-[140px] hover-lift">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Total Coverage</p>
-                        <p id="statTotal" class="text-2xl font-black text-slate-900 leading-none">0</p>
+                <div class="grid grid-cols-2 gap-3 mb-6" data-html2canvas-ignore="true">
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Province</label>
+                        <select id="zoneGovFilter" onchange="updateZoneContractorAnalysis()" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm font-bold text-slate-700 outline-none"></select>
                     </div>
-                    <div class="py-4 px-5 flex flex-col items-center justify-center text-center bg-white rounded-2xl border border-slate-200 shadow-sm flex-1 min-w-[140px] hover-lift">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Contractors</p>
-                        <p id="statContractors" class="text-2xl font-black text-slate-900 leading-none">0</p>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Search</label>
+                        <input id="contractorSearch" oninput="updateZoneContractorAnalysis()" placeholder="Contractor name..." class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm font-semibold text-slate-700 outline-none" />
                     </div>
                 </div>
 
-                <div id="zoneExportArea" class="bg-white space-y-8">
-                    <div class="h-[400px] w-full relative"><canvas id="canvasZoneChart"></canvas></div>
-                    <div class="table-container shadow-sm bg-white rounded-2xl border border-slate-200">
-                        <table class="w-full text-left text-sm border-collapse">
-                            <thead class="bg-slate-900 text-white font-bold">
+                <div class="flex gap-3 mb-6">
+                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex-1">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Total Units</p>
+                        <p id="statTotal" class="text-xl font-black text-blue-600">0</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex-1">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Contractors</p>
+                        <p id="statContractors" class="text-xl font-black text-purple-600">0</p>
+                    </div>
+                </div>
+
+                <div id="zoneExportArea" class="bg-white space-y-6">
+                    <div class="chart-container relative"><canvas id="canvasZoneChart"></canvas></div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <th class="px-6 py-4 uppercase tracking-wider text-[11px] bg-slate-900">Region & Contractor</th>
-                                    <th class="px-6 py-4 text-center uppercase tracking-wider text-[11px] bg-slate-900">New Users</th>
-                                    <th class="px-6 py-4 text-center uppercase tracking-wider text-[11px] bg-slate-900">Pending</th>
-                                    <th class="px-6 py-4 text-center uppercase tracking-wider text-[11px] bg-blue-600 border-l border-blue-500">Total</th>
+                                    <th>Region & Contractor</th>
+                                    <th class="text-center">New</th>
+                                    <th class="text-center">Pending</th>
+                                    <th class="text-center text-blue-300">Total</th>
                                 </tr>
                             </thead>
-                            <tbody id="zoneTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="4" class="p-16 text-center text-slate-400 italic font-medium">Awaiting data upload...</td></tr>
+                            <tbody id="zoneTableBody">
+                                <tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">Upload data to view details</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -397,147 +373,106 @@
 
         <!-- Tab 6: Export Pending (Converter) -->
         <div id="tab6" class="tab-content hidden transition-opacity duration-300 font-arabic" dir="rtl">
-            <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 card-shadow transition-all">
+            <div class="app-card p-5 sm:p-6">
                 
-                <!-- الترويسة -->
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-slate-100 pb-6">
-                    <div>
-                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">تصدير الطلبات المعلقة</h3>
-                        <p class="text-slate-500 font-medium text-sm mt-2">أداة متقدمة لتصفية وتصدير البيانات المتعددة (Pending Installs)</p>
-                    </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-black text-slate-900 tracking-tight">تصدير الطلبات المعلقة</h3>
+                    <p class="text-slate-500 font-medium text-xs mt-1">تصفية متقدمة لبيانات (Pending Installs)</p>
                 </div>
 
-                <div id="configSection">
+                <div id="configSection" class="space-y-4">
                     
-                    <!-- البحث اليدوي -->
-                    <div class="mb-8 bg-slate-50 border border-slate-100 rounded-3xl p-6">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</div>
-                            <h2 class="text-lg font-bold text-slate-800">البحث السريع</h2>
-                        </div>
-                        <label class="block text-[11px] font-black text-slate-500 uppercase mb-2 mr-1">بحث يدوي بالمنطقة</label>
-                        <input type="text" id="zoneNameFilter" placeholder="مثال: FTK0001" class="w-full p-3.5 border border-slate-200 rounded-xl bg-white font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all">
-                    </div>
-
-                    <!-- الفلاتر المتعددة -->
-                    <div class="mb-8 bg-slate-50 border border-slate-100 rounded-3xl p-6">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">2</div>
-                            <h2 class="text-lg font-bold text-slate-800">تخصيص البيانات</h2>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                            <!-- المحافظات -->
-                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col hover-lift">
-                                <div class="flex justify-between items-center mb-3">
-                                    <label class="text-sm font-bold text-slate-800">المحافظات</label>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" id="btnSelectAllGov" class="select-all-btn">تحديد الكل</button>
-                                        <span id="govCount" class="bg-blue-50 text-blue-600 border border-blue-100 text-[10px] px-2 py-0.5 rounded-md font-bold">0</span>
-                                    </div>
-                                </div>
-                                <div id="govContainer" class="checkbox-group-container flex-1 custom-scrollbar border-slate-100"></div>
-                            </div>
-
-                            <!-- المقاولون -->
-                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col hover-lift">
-                                <div class="flex justify-between items-center mb-3">
-                                    <label class="text-sm font-bold text-slate-800">المقاولون</label>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" id="btnSelectAllCon" class="select-all-btn">تحديد الكل</button>
-                                        <span id="contractorCount" class="bg-blue-50 text-blue-600 border border-blue-100 text-[10px] px-2 py-0.5 rounded-md font-bold">0</span>
-                                    </div>
-                                </div>
-                                <div id="contractorContainer" class="checkbox-group-container flex-1 custom-scrollbar border-slate-100"></div>
-                            </div>
-
-                            <!-- الحالة -->
-                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col hover-lift">
-                                <div class="flex justify-between items-center mb-3">
-                                    <label class="text-sm font-bold text-slate-800">الحالة</label>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" id="btnSelectAllStat" class="select-all-btn">تحديد الكل</button>
-                                        <span id="statusCount" class="bg-blue-50 text-blue-600 border border-blue-100 text-[10px] px-2 py-0.5 rounded-md font-bold">0</span>
-                                    </div>
-                                </div>
-                                <div id="statusContainer" class="checkbox-group-container flex-1 custom-scrollbar border-slate-100"></div>
-                            </div>
-
-                            <!-- ملاحظات -->
-                            <div class="bg-blue-50/70 p-5 rounded-2xl border border-blue-100 shadow-sm flex flex-col justify-center">
-                                <label class="block text-[11px] font-black text-blue-700 mb-2 uppercase tracking-widest">آلية التصدير</label>
-                                <p class="text-xs text-blue-800/80 font-medium leading-relaxed">سيتم إنشاء ملف منفصل لكل تركيبة مختارة من (محافظة + مقاول)، بينما سيتم دمج الحالات المختارة معاً في نفس الملف.</p>
-                                <p id="smartSelectionNote" class="text-xs text-blue-700 font-bold leading-relaxed mt-3 hidden"></p>
-                            </div>
-                        </div>
-
-                        <!-- الفلاتر الذكية (تظهر لشروط معينة مثل صلاح الدين) -->
-                        <div class="mb-2 hidden bg-white border border-slate-200 rounded-2xl p-5 shadow-sm transition-all duration-300" id="smartGroupContainer">
-                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                                <div>
-                                    <div class="text-sm font-black text-slate-800">المناطق الذكية</div>
-                                    <div class="text-[11px] font-medium text-slate-500 mt-1">تظهر عند اختيار صلاح الدين منفردة</div>
-                                </div>
-                                <span class="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black">فلتر متقدم</span>
-                            </div>
-                            <div class="flex flex-wrap gap-2 overflow-x-auto pb-2 custom-scrollbar" id="smartGroups"></div>
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">بحث ذكي بالمنطقة</label>
+                        <div class="relative">
+                            <input type="text" id="zoneNameFilter" placeholder="مثال: FTK0001" class="w-full p-3 pl-10 border border-slate-200 rounded-xl bg-white font-semibold text-sm outline-none focus:border-blue-500">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         </div>
                     </div>
 
-                    <!-- جدول عرض البيانات -->
-                    <div class="mb-8 bg-slate-50 border border-slate-100 rounded-3xl p-6">
-                        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-5">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">3</div>
-                                <h2 class="text-lg font-bold text-slate-800">معاينة النتائج</h2>
-                            </div>
-                            
-                            <div class="flex flex-col gap-3 w-full md:w-auto">
-                                <div id="statusBreakdown" class="text-[11px] font-bold text-slate-600 bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm text-center md:text-right hidden">
-                                </div>
-                                
-                                <div class="flex items-center justify-between md:justify-end gap-4 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm w-full">
-                                    <button id="prevPage" class="pagination-btn hover:bg-slate-50">السابق</button>
-                                    <div class="text-xs font-bold text-slate-500">
-                                        صفحة <span id="currentPageNum" class="text-blue-600 text-sm mx-1">1</span> من <span id="totalPagesNum" class="mx-1">1</span>
-                                    </div>
-                                    <button id="nextPage" class="pagination-btn hover:bg-slate-50">التالي</button>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- المحافظات -->
+                        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-bold text-slate-800">المحافظات</label>
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" id="btnSelectAllGov" class="select-all-btn">تحديد الكل</button>
+                                    <span id="govCount" class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-bold">0</span>
                                 </div>
                             </div>
+                            <div id="govContainer" class="checkbox-group-container custom-scrollbar"></div>
+                        </div>
 
-                            <div class="flex flex-col items-center justify-center bg-white px-6 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px]">
-                                <span class="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-1">الإجمالي</span>
-                                <span id="countNumber" class="text-blue-600 font-black text-2xl leading-none">0</span>
+                        <!-- المقاولون -->
+                        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-bold text-slate-800">المقاولون</label>
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" id="btnSelectAllCon" class="select-all-btn">تحديد الكل</button>
+                                    <span id="contractorCount" class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-bold">0</span>
+                                </div>
+                            </div>
+                            <div id="contractorContainer" class="checkbox-group-container custom-scrollbar"></div>
+                        </div>
+
+                        <!-- الحالة -->
+                        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-bold text-slate-800">الحالة</label>
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" id="btnSelectAllStat" class="select-all-btn">تحديد الكل</button>
+                                    <span id="statusCount" class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-bold">0</span>
+                                </div>
+                            </div>
+                            <div id="statusContainer" class="checkbox-group-container custom-scrollbar"></div>
+                        </div>
+                    </div>
+
+                    <!-- الفلاتر الذكية -->
+                    <div class="hidden bg-blue-50/50 border border-blue-100 rounded-2xl p-4" id="smartGroupContainer">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-xs font-bold text-blue-900">المناطق الذكية (صلاح الدين)</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5 overflow-x-auto custom-scrollbar pb-1" id="smartGroups"></div>
+                        <p id="smartSelectionNote" class="text-[10px] text-blue-700 font-bold mt-2 hidden"></p>
+                    </div>
+
+                    <!-- الجدول والمعاينة -->
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                            <h2 class="text-sm font-bold text-slate-800">معاينة البيانات</h2>
+                            <div class="flex items-center gap-3 w-full sm:w-auto">
+                                <div class="flex items-center bg-white p-1 rounded-full border border-slate-200">
+                                    <button id="prevPage" class="pagination-btn">السابق</button>
+                                    <span class="text-xs font-bold px-3"><span id="currentPageNum" class="text-blue-600">1</span> / <span id="totalPagesNum">1</span></span>
+                                    <button id="nextPage" class="pagination-btn">التالي</button>
+                                </div>
+                                <span class="bg-blue-600 text-white text-[10px] px-2.5 py-1.5 rounded-lg font-bold shadow-sm whitespace-nowrap"><span id="countNumber">0</span> صف</span>
                             </div>
                         </div>
-                        <div class="table-container shadow-sm bg-white rounded-2xl border border-slate-200">
+                        <div id="statusBreakdown" class="text-[10px] font-bold text-slate-600 bg-white px-3 py-2 rounded-lg border border-slate-200 mb-3 text-right hidden leading-loose"></div>
+                        <div class="table-container bg-white">
                             <table id="previewTable">
-                                <thead id="previewHead" class="bg-slate-900 text-white font-bold"></thead>
-                                <tbody id="previewBody" class="divide-y divide-slate-100">
-                                    <tr>
-                                        <td colspan="100%" class="text-center py-16 text-slate-400 font-medium">يرجى تحميل ملف "Pending Installs" في التبويب الثاني لظهور البيانات</td>
-                                    </tr>
+                                <thead id="previewHead"></thead>
+                                <tbody id="previewBody">
+                                    <tr><td colspan="100%" class="text-center py-12 text-slate-400 text-xs">يرجى تحميل ملف "Pending Installs" لعرض البيانات</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    <!-- زر الاستخراج -->
-                    <div class="bg-slate-900 p-6 md:p-8 rounded-3xl flex flex-col lg:flex-row items-center gap-6 text-white shadow-xl mt-4">
-                        <div class="flex items-center gap-4 mb-4 lg:mb-0 flex-1">
-                            <div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold shrink-0 text-lg shadow-inner">4</div>
-                            <div>
-                                <p class="font-black text-xl tracking-tight">خيارات التصدير</p>
-                                <p class="text-slate-400 text-sm font-medium mt-1">تنزيل كملف شامل أو تقسيم البيانات في ملفات منفصلة</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-                            <button id="exportSingleBtn" class="px-6 py-3.5 bg-slate-800 text-white rounded-2xl font-black text-sm whitespace-nowrap border border-slate-700 hover:bg-slate-700 active:scale-95 transition-all shadow-sm">تصدير كملف واحد</button>
-                            <button id="convertBtn" class="px-6 py-3.5 bg-blue-600 text-white rounded-2xl font-black text-sm whitespace-nowrap shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all">تصدير ملفات منفصلة</button>
-                        </div>
+                    <!-- أزرار التصدير -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                        <button id="convertBtn" class="p-3.5 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-500/20 active:scale-95 transition-all flex justify-center items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            تصدير ملفات منفصلة
+                        </button>
+                        <button id="exportSingleBtn" class="p-3.5 bg-slate-800 text-white rounded-xl font-bold text-sm active:scale-95 transition-all flex justify-center items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            تصدير كملف واحد
+                        </button>
                     </div>
                 </div>
-
-                <div id="statusMsg" class="mt-6 p-4 text-center text-sm font-bold hidden rounded-2xl"></div>
             </div>
         </div>
     </main>
@@ -552,7 +487,6 @@
         };
 
         window.appState = {
-          ui: { contractorSearch: '' },
           "1": { rows: [], headers: [], chart: null, govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 },
           "2": { rows: [], headers: [], chart: null, govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 },
           "5": { chart: null },
@@ -624,7 +558,7 @@
             state.headers = headers;
 
             const schema = window.validateUploadSchema(fileNum, headers);
-            if (!schema.ok) return window.showToast(`Missing required column(s): ${schema.missing.join(', ')}`);
+            if (!schema.ok) return window.showToast(`Missing columns: ${schema.missing.join(', ')}`);
 
             state.zoneIdx = schema.zoneIdx;
             state.contractorIdx = schema.contractorIdx;
@@ -641,20 +575,14 @@
             state.rows = initialRows;
 
             if (fileNum === '2' && state.statusIdx !== -1) {
-              const pendingStatuses = [
-                'pending physical installation',
-                'pending validation',
-                'on hold',
-                'valid request'
-              ];
+              const pendingStatuses = ['pending physical installation', 'pending validation', 'on hold', 'valid request', 'otp verified'];
               state.rows = state.rows.filter(r => pendingStatuses.includes(window.normalizeStatus(r[state.statusIdx])));
-              // Automatically refresh Tab 6 if it's updated
               if(window.ExportConverter) window.ExportConverter.loadDataFromTab2();
             }
 
             window.populateFilters(fileNum);
             window.applyFilter(fileNum);
-            window.showToast(`Success: Dataset ${fileNum} integrated (${state.rows.length}/${initialRows.length} rows)`);
+            window.showToast(`Success: Dataset ${fileNum} integrated (${state.rows.length} rows)`);
 
             if (fileNum === '1') window.updateSouthConfigChart();
           };
@@ -679,9 +607,7 @@
                 const tableData = [['Province', 'Contractor', 'New Users', 'Pending Physical', 'Total']];
                 const rows = document.querySelectorAll('#zoneTableBody tr');
                 
-                if (rows.length === 0 || rows[0].innerText.includes('Awaiting data') || rows[0].innerText.includes('No results')) {
-                    return window.showToast('No data found in the table to export');
-                }
+                if (rows.length === 0 || rows[0].innerText.includes('upload')) return window.showToast('No data to export');
 
                 rows.forEach(tr => {
                     const tds = tr.querySelectorAll('td');
@@ -698,111 +624,60 @@
                 const ws = XLSX.utils.aoa_to_sheet(tableData);
                 ws['!cols'] = calculateColumnWidths(tableData);
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Performance Report");
-                const dateStr = new Date().toISOString().split('T')[0];
-                XLSX.writeFile(wb, `EL_Performance_${selectedGov}_${dateStr}.xlsx`);
-                window.showToast('Excel file exported successfully');
-            } catch (error) { window.showToast('Error during Excel export'); }
+                XLSX.utils.book_append_sheet(wb, ws, "Performance");
+                XLSX.writeFile(wb, `EL_Performance_${selectedGov}.xlsx`);
+                window.showToast('Exported successfully');
+            } catch (error) { window.showToast('Export error'); }
         };
 
         window.exportChartAsImage = async function(elementId) {
             try {
-                window.showToast('Generating High-Res Capture...');
-                
+                window.showToast('Saving Image...');
                 const target = document.getElementById(elementId);
-                if (!target) return window.showToast('Element not found');
-
-                if (elementId === 'fullMarketReport' && window.appState.comparisonChart) {
-                    window.appState.comparisonChart.options.animation = false;
-                }
-
-                const canvas = await html2canvas(target, {
-                    scale: 5, 
-                    useCORS: true, 
-                    backgroundColor: '#ffffff'
-                });
-
-                if (elementId === 'fullMarketReport' && window.appState.comparisonChart) {
-                    window.appState.comparisonChart.options.animation = true;
-                }
-
+                if (!target) return;
+                if (elementId === 'fullMarketReport' && window.appState.comparisonChart) window.appState.comparisonChart.options.animation = false;
+                const canvas = await html2canvas(target, { scale: 5, useCORS: true, backgroundColor: '#ffffff' });
+                if (elementId === 'fullMarketReport' && window.appState.comparisonChart) window.appState.comparisonChart.options.animation = true;
                 const link = document.createElement('a');
-                link.download = `EL_Analytics_${elementId}_${new Date().toISOString().split('T')[0]}.png`;
+                link.download = `EL_${elementId}.png`;
                 link.href = canvas.toDataURL('image/png', 1.0);
                 link.click();
-                window.showToast('Report saved successfully');
-            } catch (error) { 
-                console.error('Image Export Error:', error);
-                window.showToast('Error during image export'); 
-            }
+            } catch (error) { window.showToast('Image export error'); }
         };
 
         window.exportProvinceData = function(fileNum) {
             const state = window.appState ? window.appState[fileNum] : null;
-            if (!state || !state.rows || !state.rows.length || state.govIdx === -1) {
-                return window.showToast('No data available for export');
-            }
+            if (!state || !state.rows || !state.rows.length || state.govIdx === -1) return window.showToast('No data');
             const counts = {};
-            state.rows.forEach(r => {
-                const province = r[state.govIdx] || 'Undefined';
-                counts[province] = (counts[province] || 0) + 1;
-            });
-            const dataForExcel = [['Province', 'Record Count']];
+            state.rows.forEach(r => { counts[r[state.govIdx] || 'Undefined'] = (counts[r[state.govIdx] || 'Undefined'] || 0) + 1; });
+            const dataForExcel = [['Province', 'Count']];
             Object.keys(counts).sort((a, b) => counts[b] - counts[a]).forEach(p => dataForExcel.push([p, counts[p]]));
             const ws = XLSX.utils.aoa_to_sheet(dataForExcel);
             ws['!cols'] = calculateColumnWidths(dataForExcel);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Province Statistics");
-            const dateStr = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `EL_Province_Stats_${fileNum}_${dateStr}.xlsx`);
-            window.showToast('Province statistics exported');
+            XLSX.utils.book_append_sheet(wb, ws, "Stats");
+            XLSX.writeFile(wb, `EL_Province_Stats.xlsx`);
         };
 
         window.exportComparisonData = function() {
             const rows1 = window.appState['1']?.rows || [];
             const rows2 = window.appState['2']?.rows || [];
-            
-            if (rows1.length === 0 && rows2.length === 0) {
-                return window.showToast('No data available for export');
-            }
+            if (!rows1.length && !rows2.length) return window.showToast('No data');
 
             const d1 = {}, d2 = {};
-            const processRows = (rows, govIdx, targetObj) => {
-                rows.forEach(r => {
-                    if (!r) return;
-                    const val = r[govIdx];
-                    if (val === undefined || val === null || val.toString().trim() === "") return;
-                    const label = val.toString().trim();
-                    targetObj[label] = (targetObj[label] || 0) + 1;
-                });
-            };
+            const process = (rows, idx, target) => { rows.forEach(r => { if(r && r[idx]) { const l=r[idx].toString().trim(); target[l]=(target[l]||0)+1; }}); };
+            process(rows1, window.appState['1'].govIdx, d1);
+            process(rows2, window.appState['2'].govIdx, d2);
 
-            processRows(rows1, window.appState['1'].govIdx, d1);
-            processRows(rows2, window.appState['2'].govIdx, d2);
-
-            const labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
-            
-            labels.sort((a, b) => {
-                const newA = d1[a] || 0;
-                const newB = d1[b] || 0;
-                if (newA !== newB) return newB - newA;
-                return (d2[b] || 0) - (d2[a] || 0);
-            });
-
-            const dataForExcel = [['Province', 'New Users', 'Pending Physical', 'Total Combined']];
-            labels.forEach(p => {
-                const newU = d1[p] || 0;
-                const pendU = d2[p] || 0;
-                dataForExcel.push([p, newU, pendU, newU + pendU]);
-            });
+            const labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)])).sort((a, b) => (d1[b]||0)-(d1[a]||0) || (d2[b]||0)-(d2[a]||0));
+            const dataForExcel = [['Province', 'New', 'Pending', 'Total']];
+            labels.forEach(p => dataForExcel.push([p, d1[p]||0, d2[p]||0, (d1[p]||0)+(d2[p]||0)]));
 
             const ws = XLSX.utils.aoa_to_sheet(dataForExcel);
             ws['!cols'] = calculateColumnWidths(dataForExcel);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Market Comparison Stats");
-            const dateStr = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `EL_Market_Comparison_${dateStr}.xlsx`);
-            window.showToast('Comparison statistics exported to Excel');
+            XLSX.utils.book_append_sheet(wb, ws, "Comparison");
+            XLSX.writeFile(wb, `EL_Comparison.xlsx`);
         };
 
         // --- 4. UI.JS ---
@@ -820,21 +695,29 @@
           t.classList.remove('show');
           void t.offsetWidth;
           t.classList.add('show');
-          
           if (toastTimeout) clearTimeout(toastTimeout);
-          toastTimeout = setTimeout(() => {
-              t.classList.remove('show');
-          }, 3000);
+          toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
         };
 
         window.switchTab = function(tabId) {
           document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('hidden', t.id !== tabId));
+          
           document.querySelectorAll('.tab-btn').forEach(btn => {
-            const isActive = btn.id === `btn-${tabId}`;
-            btn.classList.toggle('tab-active', isActive);
-            btn.classList.toggle('text-slate-500', !isActive);
-            if (btn.id === 'btn-tab6') btn.classList.toggle('text-orange-600', isActive);
+              btn.classList.remove('bg-blue-600', 'bg-orange-600', 'text-white', 'shadow-md', 'shadow-blue-500/20', 'shadow-orange-500/20', 'border-transparent');
+              btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
           });
+
+          const btnElement = document.getElementById('btn-' + tabId);
+          if(btnElement) {
+              btnElement.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+              if (tabId === 'tab6') {
+                  btnElement.classList.add('bg-orange-600', 'text-white', 'shadow-md', 'shadow-orange-500/20', 'border-transparent');
+              } else {
+                  btnElement.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/20', 'border-transparent');
+              }
+              btnElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+
           const tabActions = {
             'tab3': () => window.scheduleUpdate('cmp-tab', window.updateComparisonChart),
             'tab4': () => window.scheduleUpdate('contractor-tab', window.updateZoneContractorAnalysis),
@@ -863,7 +746,6 @@
           if (!state || !select) return;
           const val = select.value || 'all';
           const filtered = val === 'all' ? state.rows : state.rows.filter(r => r[state.govIdx] === val);
-          
           window.scheduleUpdate(`single-${fileNum}`, () => window.renderSingleChart(fileNum, filtered));
           const updates = {
             '1': [{ key: 'south-filter', fn: window.updateSouthConfigChart }, { key: 'cmp-filter-1', fn: window.updateComparisonChart }],
@@ -873,141 +755,68 @@
         };
 
         window.resetAllData = function() {
-          const resetElements = (fileNum) => {
-            document.getElementById(`filterArea${fileNum}`)?.classList.add('hidden');
-            const rowCount = document.getElementById(`rowCount${fileNum}`);
-            if (rowCount) rowCount.textContent = '0';
-            const fileInput = document.getElementById(`fileInput${fileNum}`);
-            if (fileInput) fileInput.value = '';
-          };
-
           ['1', '2'].forEach(fileNum => {
             const state = window.appState[fileNum];
-            if (state) {
-              Object.assign(state, { rows: [], headers: [], govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 });
-              if (state.chart) { state.chart.destroy(); state.chart = null; }
-            }
-            resetElements(fileNum);
+            if (state) { Object.assign(state, { rows: [], headers: [], govIdx: -1, zoneIdx: -1, contractorIdx: -1, statusIdx: -1 }); if (state.chart) { state.chart.destroy(); state.chart = null; } }
+            document.getElementById(`filterArea${fileNum}`)?.classList.add('hidden');
+            if(document.getElementById(`rowCount${fileNum}`)) document.getElementById(`rowCount${fileNum}`).textContent = '0';
+            if(document.getElementById(`fileInput${fileNum}`)) document.getElementById(`fileInput${fileNum}`).value = '';
           });
 
-          ['5', 'comparisonChart', 'zoneChart'].forEach(key => {
-            const target = key.length === 1 ? window.appState[key] : window.appState;
-            const chartKey = key.length === 1 ? 'chart' : key;
-            if (target?.[chartKey]) { target[chartKey].destroy(); target[chartKey] = null; }
+          ['5', 'comparisonChart', 'zoneChart'].forEach(k => {
+            const t = k.length === 1 ? window.appState[k] : window.appState;
+            const ck = k.length === 1 ? 'chart' : k;
+            if (t?.[ck]) { t[ck].destroy(); t[ck] = null; }
           });
 
-          const uiDefaults = { 'rowCount5': '0', 'statTotal': '0', 'statContractors': '0', 'cmpSouthNew': '0', 'cmpSouthPending': '0', 'cmpNewTotal': '0', 'cmpPendingTotal': '0', 'cmpCombinedTotal': '0' };
-          Object.entries(uiDefaults).forEach(([id, val]) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
+          ['rowCount5', 'statTotal', 'statContractors', 'cmpSouthNew', 'cmpSouthPending', 'cmpNewTotal', 'cmpPendingTotal', 'cmpCombinedTotal'].forEach(id => {
+            if(document.getElementById(id)) document.getElementById(id).textContent = '0';
           });
-
-          const search = document.getElementById('contractorSearch');
-          if (search) search.value = '';
-
-          const tbody = document.getElementById('zoneTableBody');
-          if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-16 text-center text-slate-400 italic font-medium">Awaiting data upload...</td></tr>';
+          if(document.getElementById('contractorSearch')) document.getElementById('contractorSearch').value = '';
+          if(document.getElementById('zoneTableBody')) document.getElementById('zoneTableBody').innerHTML = '<tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">Awaiting data upload...</td></tr>';
 
           if(window.ExportConverter) window.ExportConverter.loadDataFromTab2();
-
-          window.showToast('All datasets and charts have been reset');
+          window.showToast('App data reset');
           window.switchTab('tab1');
         };
 
         // --- 5. CHARTS (SINGLE & SOUTH) ---
         window.renderSingleChart = function(fileNum, data) {
             document.getElementById(`rowCount${fileNum}`).textContent = data.length.toLocaleString();
-            const counts = {};
-            data.forEach(r => {
-                const g = r[window.appState[fileNum].govIdx];
-                counts[g] = (counts[g] || 0) + 1;
-            });
+            const counts = {}; data.forEach(r => { const g = r[window.appState[fileNum].govIdx]; counts[g] = (counts[g] || 0) + 1; });
             const labels = Object.values(window.govMapping).filter(l => counts[l]).sort( (a, b) => counts[b] - counts[a]);
 
             if (window.appState[fileNum].chart) window.appState[fileNum].chart.destroy();
             const ctx = document.getElementById(`canvas${fileNum}`).getContext('2d');
             window.appState[fileNum].chart = new Chart(ctx,{
                 type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: labels.map(l => counts[l]),
-                        backgroundColor: fileNum === '1' ? '#2563eb' : '#7c3aed',
-                        borderRadius: 12, barThickness: 24, categoryPercentage: 0.75
-                    }]
-                },
+                data: { labels, datasets: [{ data: labels.map(l => counts[l]), backgroundColor: fileNum === '1' ? '#2563eb' : '#a855f7', borderRadius: 8, barThickness: 24, categoryPercentage: 0.75 }] },
                 options: {
-                    indexAxis: 'y', maintainAspectRatio: false,
-                    layout: { padding: { top: 8, bottom: 8, left: 5, right: 8 } },
-                    plugins: {
-                        legend: { display: false },
-                        datalabels: {
-                            anchor: 'end', align: 'right', offset: 12, color: '#64748b',
-                            font: (ctx) => ({ weight: '800', size: Number(ctx?.dataset?.data?.[ctx.dataIndex] || 0) >= 350 ? 15 : 11 })
-                        }
-                    },
-                    scales: {
-                        x: { display: false, grid: { display: false }, grace: '10%' },
-                        y: { grid: { display: false }, ticks: { font: { weight: '700' }, padding: 7 } }
-                    }
+                    indexAxis: 'y', maintainAspectRatio: false, layout: { padding: { top: 0, bottom: 0, left: 0, right: 20 } },
+                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'right', offset: 8, color: '#64748b', font: { weight: '800', size: 11 } } },
+                    scales: { x: { display: false, grace: '15%' }, y: { grid: { display: false }, border: {display: false}, ticks: { font: { weight: '600' }, color: '#475569' } } }
                 }
             });
         };
 
         window.updateSouthConfigChart = function() {
           const state = window.appState['1'];
-          if (!state.rows.length || state.zoneIdx === -1) {
-            document.getElementById('rowCount5').textContent = '0';
-            if (window.appState['5'].chart) { window.appState['5'].chart.destroy(); window.appState['5'].chart = null; }
-            return;
-          }
-
-          const southCodes = ['FTK', 'FBS', 'FNS', 'FMU', 'FAM'];
-          const southNames = { FTK: 'Salah aldin', FBS: 'Basrah', FNS: 'Thy Qar', FMU: 'Muthanna', FAM: 'Misan' };
-          const counts = { FTK: 0, FBS: 0, FNS: 0, FMU: 0, FAM: 0 };
-          let totalSouth = 0;
-
-          state.rows.forEach(r => {
-            const zone = (r[state.zoneIdx] || '').toUpperCase();
-            for (const code of southCodes) {
-              if (zone.startsWith(code)) { counts[code] += 1; totalSouth += 1; break; }
-            }
-          });
-
+          if (!state.rows.length || state.zoneIdx === -1) { document.getElementById('rowCount5').textContent = '0'; if (window.appState['5'].chart) { window.appState['5'].chart.destroy(); window.appState['5'].chart = null; } return; }
+          const southCodes = ['FTK', 'FBS', 'FNS', 'FMU', 'FAM']; const southNames = { FTK: 'Salah aldin', FBS: 'Basrah', FNS: 'Thy Qar', FMU: 'Muthanna', FAM: 'Misan' };
+          const counts = { FTK: 0, FBS: 0, FNS: 0, FMU: 0, FAM: 0 }; let totalSouth = 0;
+          state.rows.forEach(r => { const zone = (r[state.zoneIdx] || '').toUpperCase(); for (const c of southCodes) { if (zone.startsWith(c)) { counts[c]++; totalSouth++; break; } } });
           const sortType = document.getElementById('sortSouth')?.value || 'desc';
           const sortedCodes = [...southCodes].sort((a, b) => sortType === 'asc' ? counts[a] - counts[b] : counts[b] - counts[a]);
 
           document.getElementById('rowCount5').textContent = totalSouth.toLocaleString();
-          const ctx = document.getElementById('canvas5').getContext('2d');
           if (window.appState['5'].chart) window.appState['5'].chart.destroy();
-
-          const palette = { FTK: '#0f766e', FBS: '#0d9488', FNS: '#14b8a6', FMU: '#2dd4bf', FAM: '#5eead4' };
-
-          window.appState['5'].chart = new Chart(ctx, {
+          window.appState['5'].chart = new Chart(document.getElementById('canvas5').getContext('2d'), {
             type: 'bar',
-            data: {
-              labels: sortedCodes.map(c => `${c}: ${southNames[c]}`),
-              datasets: [{
-                data: sortedCodes.map(c => counts[c]),
-                backgroundColor: sortedCodes.map(c => palette[c]),
-                borderRadius: 6, barThickness: 25, categoryPercentage: 0.8
-              }]
-            },
+            data: { labels: sortedCodes.map(c => `${c}: ${southNames[c]}`), datasets: [{ data: sortedCodes.map(c => counts[c]), backgroundColor: sortedCodes.map(c => ({ FTK: '#0f766e', FBS: '#0d9488', FNS: '#14b8a6', FMU: '#2dd4bf', FAM: '#5eead4' }[c])), borderRadius: 8, barThickness: 20 }] },
             options: {
-              indexAxis: 'y', maintainAspectRatio: false,
-              layout: { padding: { top: 10, bottom: 10, left: 10, right: 45 } },
-              plugins: {
-                legend: { display: false },
-                datalabels: {
-                  anchor: 'end', align: 'right', offset: 8, font: { weight: '900', size: 13 },
-                  color: (context) => context.dataset.backgroundColor[context.dataIndex],
-                  formatter: (value) => value.toLocaleString()
-                }
-              },
-              scales: {
-                x: { display: false, grace: '20%' },
-                y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: '700', size: 12 }, color: '#334155' } }
-              }
+              indexAxis: 'y', maintainAspectRatio: false, layout: { padding: { right: 30 } },
+              plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'right', offset: 8, font: { weight: '800', size: 12 }, color: c => c.dataset.backgroundColor[c.dataIndex] } },
+              scales: { x: { display: false, grace: '20%' }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: '600' } } } }
             }
           });
         };
@@ -1015,662 +824,271 @@
         // --- 6. CHARTS (COMPARISON) ---
         window.updateComparisonChart = function() {
           if (!window.appState || !window.appState['1'] || !window.appState['2']) return;
-
           const sortType = document.getElementById('sortComparison')?.value || 'desc';
-          const rows1 = window.appState['1'].rows || [];
-          const rows2 = window.appState['2'].rows || [];
+          const rows1 = window.appState['1'].rows || []; const rows2 = window.appState['2'].rows || [];
           const d1 = {}, d2 = {};
-
-          const processRows = (rows, govIdx, targetObj) => {
-            rows.forEach(r => {
-              if (!r) return; 
-              const val = r[govIdx];
-              if (val === undefined || val === null || val.toString().trim() === "") return; 
-              const label = val.toString().trim();
-              targetObj[label] = (targetObj[label] || 0) + 1;
-            });
-          };
-
-          processRows(rows1, window.appState['1'].govIdx, d1);
-          processRows(rows2, window.appState['2'].govIdx, d2);
-
+          const process = (rows, idx, target) => rows.forEach(r => { if(r && r[idx]) { const l=r[idx].toString().trim(); target[l]=(target[l]||0)+1; }});
+          process(rows1, window.appState['1'].govIdx, d1); process(rows2, window.appState['2'].govIdx, d2);
           const labels = Array.from(new Set([...Object.keys(d1), ...Object.keys(d2)]));
 
-          if (labels.length === 0) {
-            ['cmpNewTotal', 'cmpPendingTotal', 'cmpCombinedTotal', 'cmpSouthNew', 'cmpSouthPending'].forEach(id => {
-              const el = document.getElementById(id);
-              if (el) el.textContent = '0';
-            });
-            if (window.appState.comparisonChart) { window.appState.comparisonChart.destroy(); window.appState.comparisonChart = null; }
-            return;
+          if (!labels.length) {
+            ['cmpNewTotal', 'cmpPendingTotal', 'cmpCombinedTotal', 'cmpSouthNew', 'cmpSouthPending'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).textContent = '0'; });
+            if (window.appState.comparisonChart) { window.appState.comparisonChart.destroy(); window.appState.comparisonChart = null; } return;
           }
 
-          labels.sort((a, b) => {
-            const newA = d1[a] || 0;
-            const newB = d1[b] || 0;
-            const pendingA = d2[a] || 0;
-            const pendingB = d2[b] || 0;
+          labels.sort((a, b) => { const nA=d1[a]||0, nB=d1[b]||0, pA=d2[a]||0, pB=d2[b]||0; return nA!==nB ? (sortType==='desc'?nB-nA:nA-nB) : (sortType==='desc'?pB-pA:pA-pB); });
+          document.getElementById('cmpNewTotal').textContent = Object.values(d1).reduce((a, b) => a + b, 0).toLocaleString();
+          document.getElementById('cmpPendingTotal').textContent = Object.values(d2).reduce((a, b) => a + b, 0).toLocaleString();
+          document.getElementById('cmpCombinedTotal').textContent = (Object.values(d1).reduce((a, b) => a + b, 0) + Object.values(d2).reduce((a, b) => a + b, 0)).toLocaleString();
 
-            if (newA !== newB) {
-                return sortType === 'desc' ? newB - newA : newA - newB;
-            }
-            return sortType === 'desc' ? pendingB - pendingA : pendingA - pendingB;
-          });
-
-          const newTotal = Object.values(d1).reduce((a, b) => a + b, 0);
-          const pendingTotal = Object.values(d2).reduce((a, b) => a + b, 0);
-          
-          document.getElementById('cmpNewTotal').textContent = newTotal.toLocaleString();
-          document.getElementById('cmpPendingTotal').textContent = pendingTotal.toLocaleString();
-          document.getElementById('cmpCombinedTotal').textContent = (newTotal + pendingTotal).toLocaleString();
-
-          let southNew = 0, southPending = 0;
-          const southCodes = ['FTK', 'FBS', 'FNS', 'FMU', 'FAM'];
-          const countSouth = (rows, state) => {
-              if (!rows || state.zoneIdx === -1) return 0;
-              let count = 0;
-              rows.forEach(r => {
-                  const zone = (r[state.zoneIdx] || '').toUpperCase();
-                  if (southCodes.some(c => zone.startsWith(c))) count++;
-              });
-              return count;
-          };
-          
-          southNew = countSouth(rows1, window.appState['1']);
-          southPending = countSouth(rows2, window.appState['2']);
-          
-          const southNewEl = document.getElementById('cmpSouthNew');
-          if (southNewEl) southNewEl.textContent = southNew.toLocaleString();
-          const southPendEl = document.getElementById('cmpSouthPending');
-          if (southPendEl) southPendEl.textContent = southPending.toLocaleString();
+          const countSouth = (rows, state) => { if (!rows || state.zoneIdx === -1) return 0; let c = 0; rows.forEach(r => { const z = (r[state.zoneIdx] || '').toUpperCase(); if (['FTK', 'FBS', 'FNS', 'FMU', 'FAM'].some(sc => z.startsWith(sc))) c++; }); return c; };
+          if(document.getElementById('cmpSouthNew')) document.getElementById('cmpSouthNew').textContent = countSouth(rows1, window.appState['1']).toLocaleString();
+          if(document.getElementById('cmpSouthPending')) document.getElementById('cmpSouthPending').textContent = countSouth(rows2, window.appState['2']).toLocaleString();
 
           if (window.appState.comparisonChart) window.appState.comparisonChart.destroy();
-
-          const canvas = document.getElementById('canvasComparison');
-          if (!canvas) return;
-          const ctx = canvas.getContext('2d');
-
-          window.appState.comparisonChart = new Chart(ctx, {
+          window.appState.comparisonChart = new Chart(document.getElementById('canvasComparison').getContext('2d'), {
             type: 'bar',
-            data: {
-              labels,
-              datasets: [
-                { label: 'New User Acquisition', data: labels.map(l => d1[l] || 0), backgroundColor: '#2563eb', borderRadius: 0, barPercentage: 0.70, categoryPercentage: 0.85 },
-                { label: 'Pending Physical Install', data: labels.map(l => d2[l] || 0), backgroundColor: '#7c3aed', borderRadius: 0, barPercentage: 0.70, categoryPercentage: 0.85 }
-              ]
-            },
+            data: { labels, datasets: [ { label: 'New Users', data: labels.map(l => d1[l] || 0), backgroundColor: '#2563eb', borderRadius: 0, barPercentage: 0.8, categoryPercentage: 0.9 }, { label: 'Pending', data: labels.map(l => d2[l] || 0), backgroundColor: '#a855f7', borderRadius: 0, barPercentage: 0.8, categoryPercentage: 0.9 } ] },
             options: {
-              responsive: true,
-              indexAxis: 'y', maintainAspectRatio: false,
-              layout: { padding: { top: 20, bottom: 20, right: 12, left: 10 } },
-              plugins: {
-                legend: { 
-                  position: 'top', 
-                  align: 'center', 
-                  labels: { font: { weight: '900', size: 12 }, padding: 14, usePointStyle: true } 
-                },
-                datalabels: { anchor: 'end', align: 'right', offset: 5, font: { size: 11, weight: '900' }, formatter: v => v > 0 ? v.toLocaleString() : '', color: (context) => context.dataset.backgroundColor }
-              },
-              scales: {
-                x: { grid: { color: '#f1f5f9' }, border: { display: false }, grace: '18%', ticks: { display: false } },
-                y: { 
-                  grid: { display: false }, 
-                  border: { display: false }, 
-                  ticks: { font: { weight: '700', size: 11 }, padding: 15 } 
-                }
-              }
+              responsive: true, indexAxis: 'y', maintainAspectRatio: false, layout: { padding: { right: 25 } },
+              plugins: { legend: { position: 'top', align: 'end', labels: { font: { weight: '700', size: 11 }, usePointStyle: true, boxWidth: 8 } }, datalabels: { anchor: 'end', align: 'right', offset: 4, font: { size: 10, weight: '800' }, formatter: v => v > 0 ? v : '', color: c => c.dataset.backgroundColor } },
+              scales: { x: { display: false, grace: '15%' }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: '600', size: 10 } } } }
             }
           });
         };
 
         window.updateZoneContractorAnalysis = function() {
-          const tbody = document.getElementById('zoneTableBody');
-          const filterEl = document.getElementById('zoneGovFilter');
-          const totalEl = document.getElementById('statTotal');
-          const contractorEl = document.getElementById('statContractors');
-          const chartEl = document.getElementById('canvasZoneChart');
-
-          if (!tbody || !filterEl || !totalEl || !contractorEl || !chartEl) return;
-
-          const selectedGov = filterEl.value || 'all';
-          const search = (document.getElementById('contractorSearch')?.value || '').trim().toLowerCase();
+          const tbody = document.getElementById('zoneTableBody'); const filterEl = document.getElementById('zoneGovFilter');
+          const totalEl = document.getElementById('statTotal'); const contractorEl = document.getElementById('statContractors');
+          if (!tbody || !filterEl || !totalEl || !contractorEl) return;
+          const selectedGov = filterEl.value || 'all'; const search = (document.getElementById('contractorSearch')?.value || '').trim().toLowerCase();
           tbody.innerHTML = '';
+          const hasData1 = window.appState['1'].rows.length > 0 && window.appState['1'].contractorIdx !== -1;
+          const hasData2 = window.appState['2'].rows.length > 0 && window.appState['2'].contractorIdx !== -1;
 
-          const state1 = window.appState['1'];
-          const state2 = window.appState['2'];
-          const hasData1 = state1.rows.length > 0 && state1.contractorIdx !== -1;
-          const hasData2 = state2.rows.length > 0 && state2.contractorIdx !== -1;
-
-          if (!hasData1 && !hasData2) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-16 text-center text-slate-400 italic font-medium">Upload at least one valid dataset with Contractor and Zone columns.</td></tr>';
-            totalEl.textContent = '0'; contractorEl.textContent = '0';
-            if (window.appState.zoneChart) { window.appState.zoneChart.destroy(); window.appState.zoneChart = null; }
-            return;
-          }
+          if (!hasData1 && !hasData2) { tbody.innerHTML = '<tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">Upload data first</td></tr>'; totalEl.textContent = '0'; contractorEl.textContent = '0'; if (window.appState.zoneChart) window.appState.zoneChart.destroy(); return; }
 
           const masterMap = {};
-          const processRows = (rows, type, state) => {
-            rows.forEach(r => {
-              const province = r[state.govIdx];
-              if (selectedGov !== 'all' && province !== selectedGov) return;
-              if (province === 'Other') return;
+          const process = (rows, type, state) => rows.forEach(r => {
+              const p = r[state.govIdx]; if (selectedGov !== 'all' && p !== selectedGov) return; if (p === 'Other') return;
+              const c = (r[state.contractorIdx] || 'Non-Contracted').trim() || 'Non-Contracted'; if (search && !c.toLowerCase().includes(search)) return;
+              if (!masterMap[p]) masterMap[p] = {}; if (!masterMap[p][c]) masterMap[p][c] = { new: 0, pending: 0 };
+              masterMap[p][c][type]++;
+          });
+          if (hasData1) process(window.appState['1'].rows, 'new', window.appState['1']);
+          if (hasData2) process(window.appState['2'].rows, 'pending', window.appState['2']);
 
-              const contractor = (r[state.contractorIdx] || 'Non-Contracted').trim() || 'Non-Contracted';
-              if (search && !contractor.toLowerCase().includes(search)) return;
-              if (!masterMap[province]) masterMap[province] = {};
-              if (!masterMap[province][contractor]) masterMap[province][contractor] = { new: 0, pending: 0 };
-              masterMap[province][contractor][type] += 1;
-            });
-          };
-
-          if (hasData1) processRows(state1.rows, 'new', state1);
-          if (hasData2) processRows(state2.rows, 'pending', state2);
-
-          const sortedZones = Object.keys(masterMap).sort();
-          if (sortedZones.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-16 text-center text-slate-400 italic font-medium">No results found for current filter.</td></tr>';
-            totalEl.textContent = '0'; contractorEl.textContent = '0';
-            if (window.appState.zoneChart) { window.appState.zoneChart.destroy(); window.appState.zoneChart = null; }
-            return;
-          }
-
-          const chartData = { labels: [], newUsers: [], pendingUsers: [] };
-          let totalUnitCount = 0;
-          let contractorCount = 0;
-
-          sortedZones.forEach(zoneName => {
-            const contractorNames = Object.keys(masterMap[zoneName]).sort((a, b) => {
-              const newA = masterMap[zoneName][a].new;
-              const newB = masterMap[zoneName][b].new;
-              const pendingA = masterMap[zoneName][a].pending;
-              const pendingB = masterMap[zoneName][b].pending;
-
-              if (newA !== newB) return newB - newA; 
-              return pendingB - pendingA; 
-            });
-
-            contractorNames.forEach(contractorName => {
-              const stats = masterMap[zoneName][contractorName];
-              const rowTotal = stats.new + stats.pending;
-              totalUnitCount += rowTotal;
-              contractorCount += 1;
-
-              if (chartData.labels.length < 15) {
-                chartData.labels.push(contractorName.length > 22 ? `${contractorName.substring(0, 20)}...` : contractorName);
-                chartData.newUsers.push(stats.new);
-                chartData.pendingUsers.push(stats.pending);
-              }
-
-              const tr = document.createElement('tr');
-              tr.className = 'hover:bg-slate-50 transition-colors group';
-              tr.innerHTML = `
-                <td class="px-6 py-4">
-                  <span class="block text-[9px] font-black text-blue-500 uppercase tracking-tighter mb-1">${zoneName}</span>
-                  <span class="text-slate-900 font-bold">${contractorName}</span>
-                </td>
-                <td class="px-6 py-4 text-center font-bold text-blue-600">${stats.new.toLocaleString()}</td>
-                <td class="px-6 py-4 text-center font-bold text-purple-600">${stats.pending.toLocaleString()}</td>
-                <td class="px-6 py-4 text-center font-black text-slate-900 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white transition-all">${rowTotal.toLocaleString()}</td>
-              `;
-              tbody.appendChild(tr);
-            });
+          const flattenedData = [];
+          Object.keys(masterMap).forEach(z => {
+              Object.keys(masterMap[z]).forEach(c => {
+                  flattenedData.push({ zoneName: z, contractorName: c, new: masterMap[z][c].new, pending: masterMap[z][c].pending });
+              });
           });
 
-          totalEl.textContent = totalUnitCount.toLocaleString();
-          contractorEl.textContent = contractorCount.toLocaleString();
+          if (!flattenedData.length) { tbody.innerHTML = '<tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">No results</td></tr>'; totalEl.textContent = '0'; contractorEl.textContent = '0'; if (window.appState.zoneChart) window.appState.zoneChart.destroy(); return; }
+
+          // الفرز الجديد: الأولوية للطلبات الجديدة ثم المعلقة
+          flattenedData.sort((a, b) => {
+              if (b.new !== a.new) return b.new - a.new;
+              return b.pending - a.pending;
+          });
+
+          const chartData = { labels: [], newUsers: [], pendingUsers: [] }; let total = 0, cons = flattenedData.length;
+          
+          flattenedData.forEach(s => {
+              total += s.new + s.pending;
+              const label = s.contractorName;
+              if (chartData.labels.length < 15) { chartData.labels.push(label.length>15?`${label.substring(0,15)}...`:label); chartData.newUsers.push(s.new); chartData.pendingUsers.push(s.pending); }
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td><span class="block text-[9px] font-black text-blue-500 uppercase">${s.zoneName}</span><span class="font-bold">${label}</span></td><td class="text-center font-bold">${s.new}</td><td class="text-center font-bold">${s.pending}</td><td class="text-center font-black text-blue-600 bg-blue-50/30">${s.new+s.pending}</td>`;
+              tbody.appendChild(tr);
+          });
+          totalEl.textContent = total.toLocaleString(); contractorEl.textContent = cons.toLocaleString();
 
           if (window.appState.zoneChart) window.appState.zoneChart.destroy();
-          const ctx = chartEl.getContext('2d');
-          window.appState.zoneChart = new Chart(ctx, {
+          window.appState.zoneChart = new Chart(document.getElementById('canvasZoneChart').getContext('2d'), {
             type: 'bar',
-            data: {
-              labels: chartData.labels,
-              datasets: [
-                { label: 'New', data: chartData.newUsers, backgroundColor: '#2563eb', barThickness: 18, categoryPercentage: 0.62 },
-                { label: 'Pending', data: chartData.pendingUsers, backgroundColor: '#7c3aed', barThickness: 18, categoryPercentage: 0.62 }
-              ]
-            },
-            options: {
-              indexAxis: 'y', maintainAspectRatio: false,
-              layout: { padding: { top: 12, bottom: 12, left: 10, right: 10 } },
-              plugins: {
-                legend: { position: 'bottom', align: 'end', labels: { font: { weight: '700' }, boxWidth: 12 } },
-                datalabels: { color: '#fff', font: { size: 9, weight: '900' }, formatter: v => v > 0 ? v : '' }
-              },
-              scales: {
-                x: { stacked: true, display: false, grace: '5%' },
-                y: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { font: { weight: '700', size: 11 }, padding: 10 } }
-              }
-            }
+            data: { labels: chartData.labels, datasets: [ { label: 'New', data: chartData.newUsers, backgroundColor: '#2563eb', barThickness: 14 }, { label: 'Pending', data: chartData.pendingUsers, backgroundColor: '#a855f7', barThickness: 14 } ] },
+            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: {boxWidth:8, font:{size:10}} }, datalabels: { color: '#fff', font: { size: 9, weight: 'bold' }, formatter: v => v > 0 ? v : '' } }, scales: { x: { stacked: true, display: false }, y: { stacked: true, grid: { display: false }, border: {display:false}, ticks: { font: { size: 10 } } } } }
           });
         };
 
-        // --- 8. TAB 6 (EXPORT CONVERTER) INTEGRATION ---
+        // --- 8. TAB 6 (EXPORT CONVERTER) ---
         window.EL_CONVERTER_CONFIG = {
             govMap: window.govMapping,
-            smartZones: {
-                in_house: { ranges: [], specials: [8888] },
-                tikrit: { ranges: [[1, 44], [98, 99], [7000, 7300]], specials: [103] },
-                samarra: { ranges: [[45, 97], [100, 102], [253, 256]], specials: [] },
-                alam: { ranges: [[238, 252]], specials: [] },
-                dujail: { ranges: [[192, 207]], specials: [] },
-                dhuluiya: { ranges: [[257, 272]], specials: [] },
-                tuz: { ranges: [[128, 162], [216]], specials: [348] },
-                door: { ranges: [[208, 215]], specials: [] },
-                sulaiman_bek: { ranges: [[278, 282]], specials: [] },
-                baiji: { ranges: [[163, 191]], specials: [312] },
-                shirqat: { ranges: [[217, 237]], specials: [] },
-                siniya: { ranges: [[288, 294]], specials: [] },
-                balad: { ranges: [[104, 127], [332, 343]], specials: [] },
-                amerli: { ranges: [[283, 287]], specials: [] },
-                ishaqi: { ranges: [[313, 314]], specials: [] },
-                hajjaj: { ranges: [[304, 311]], specials: [315] },
-                zawiya: { ranges: [[273, 277]], specials: [] },
-                sadira: { ranges: [[322, 331]], specials: [346] },
-                yankaja: { ranges: [[296, 297]], specials: [] },
-                shukra: { ranges: [[316, 321]], specials: [] },
-                hijal: { ranges: [[298, 303]], specials: [344, 345] }
-            },
-            smartButtons: [
-                { key: 'all', label: 'الكل' }, { key: 'in_house', label: 'ان هاوس' }, { key: 'tikrit', label: 'تكريت' },
-                { key: 'samarra', label: 'سامراء' }, { key: 'alam', label: 'العلم' }, { key: 'dujail', label: 'الدجيل' },
-                { key: 'dhuluiya', label: 'الضلوعية' }, { key: 'tuz', label: 'الطوز' }, { key: 'door', label: 'الدور' },
-                { key: 'baiji', label: 'بيجي' }, { key: 'shirqat', label: 'الشرقاط' }, { key: 'balad', label: 'بلد' },
-                { key: 'sulaiman_bek', label: 'سليمان بيك' }, { key: 'siniya', label: 'الصينية' }, { key: 'amerli', label: 'امرلي' },
-                { key: 'ishaqi', label: 'الاسحاقي' }, { key: 'hajjaj', label: 'الحجاج' }, { key: 'zawiya', label: 'الزوية' },
-                { key: 'sadira', label: 'سديرة' }, { key: 'yankaja', label: 'ينكجه' }, { key: 'shukra', label: 'شكرا' },
-                { key: 'hijal', label: 'حجل' }
-            ],
+            smartZones: { in_house: { ranges: [], specials: [8888] }, tikrit: { ranges: [[1, 44], [98, 99], [7000, 7300]], specials: [103] }, samarra: { ranges: [[45, 97], [100, 102], [253, 256]], specials: [] }, alam: { ranges: [[238, 252]], specials: [] }, dujail: { ranges: [[192, 207]], specials: [] }, dhuluiya: { ranges: [[257, 272]], specials: [] }, tuz: { ranges: [[128, 162], [216]], specials: [348] }, door: { ranges: [[208, 215]], specials: [] }, sulaiman_bek: { ranges: [[278, 282]], specials: [] }, baiji: { ranges: [[163, 191]], specials: [312] }, shirqat: { ranges: [[217, 237]], specials: [] }, siniya: { ranges: [[288, 294]], specials: [] }, balad: { ranges: [[104, 127], [332, 343]], specials: [] }, amerli: { ranges: [[283, 287]], specials: [] }, ishaqi: { ranges: [[313, 314]], specials: [] }, hajjaj: { ranges: [[304, 311]], specials: [315] }, zawiya: { ranges: [[273, 277]], specials: [] }, sadira: { ranges: [[322, 331]], specials: [346] }, yankaja: { ranges: [[296, 297]], specials: [] }, shukra: { ranges: [[316, 321]], specials: [] }, hijal: { ranges: [[298, 303]], specials: [344, 345] } },
+            smartButtons: [ { key: 'all', label: 'الكل' }, { key: 'in_house', label: 'ان هاوس' }, { key: 'tikrit', label: 'تكريت' }, { key: 'samarra', label: 'سامراء' }, { key: 'alam', label: 'العلم' }, { key: 'dujail', label: 'الدجيل' }, { key: 'dhuluiya', label: 'الضلوعية' }, { key: 'tuz', label: 'الطوز' }, { key: 'door', label: 'الدور' }, { key: 'baiji', label: 'بيجي' }, { key: 'shirqat', label: 'الشرقاط' }, { key: 'balad', label: 'بلد' }, { key: 'sulaiman_bek', label: 'سليمان بيك' }, { key: 'siniya', label: 'الصينية' }, { key: 'amerli', label: 'امرلي' }, { key: 'ishaqi', label: 'الاسحاقي' }, { key: 'hajjaj', label: 'الحجاج' }, { key: 'zawiya', label: 'الزوية' }, { key: 'sadira', label: 'سديرة' }, { key: 'yankaja', label: 'ينكجه' }, { key: 'shukra', label: 'شكرا' }, { key: 'hijal', label: 'حجل' } ],
             alwaysDeleteColumns: ['Address', 'Notes', 'House', 'Street', 'Email', 'Name', 'UsrGPSLocationLongitude', 'UsrGPSLocationLatitude', 'ModifiedOn'],
             pendingOnlyDeleteColumns: ['FDT', 'FAT', 'Device Username'],
-            rowsPerPage: 50,
-            defaultSheetName: 'Data'
+            rowsPerPage: 50, defaultSheetName: 'Data'
         };
 
         window.ExportConverter = (() => {
-            const config = window.EL_CONVERTER_CONFIG;
-            const state = { rawData: [], filteredData: [], currentPage: 1, currentSmartFilter: 'all' };
-            let dom = {};
+            const config = window.EL_CONVERTER_CONFIG; const state = { rawData: [], filteredData: [], currentPage: 1, currentSmartFilter: 'all' }; let dom = {};
+            const debounce = (f, w) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), w); }; };
+            const getVal = (o, ks) => { const lks = ks.map(k=>k.toLowerCase()); for (let k in o) if (lks.includes(k.toLowerCase())) return o[k]; return ''; };
+            const getZone = r => getVal(r, ['zone name', 'zone']).toString().toUpperCase();
+            const getChecked = n => Array.from(document.querySelectorAll(`input[name="${n}"]:checked`)).map(cb => cb.value);
+            
+            const toggleAll = (id, n) => {
+                const c = document.getElementById(id).querySelectorAll(`input[name="${n}"]`); if (!c.length) return;
+                const all = Array.from(c).every(cb => cb.checked); c.forEach(cb => cb.checked = !all);
+                if (n === 'gov') updateCons(); else if (n === 'contractor') updateStats(); else updateFilters();
+            };
 
-            function debounce(func, wait) {
-                let timeout;
-                return function (...args) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => func(...args), wait);
-                };
-            }
+            const buildCbs = (cnt, n, vals, cb) => {
+                if (!cnt) return;
+                cnt.innerHTML = ''; const f = document.createDocumentFragment();
+                vals.forEach(v => { const l=document.createElement('label'); l.className='checkbox-item'; l.innerHTML=`<input type="checkbox" name="${n}" value="${v}"><span class="text-xs font-semibold mr-2">${v}</span>`; l.querySelector('input').addEventListener('change', cb); f.appendChild(l); });
+                cnt.appendChild(f);
+            };
 
-            function getValCaseInsensitive(obj, keys) {
-                const lowerKeys = keys.map(k => k.toLowerCase());
-                for (let k in obj) {
-                    if (lowerKeys.includes(k.toLowerCase())) return obj[k];
+            const initSmarts = () => {
+                if (!dom.smartGroups) return;
+                dom.smartGroups.innerHTML = ''; const f = document.createDocumentFragment();
+                config.smartButtons.forEach(b => { const btn=document.createElement('button'); btn.className=`group-btn ${b.key==='all'?'active':''}`; btn.dataset.filter=b.key; btn.textContent=b.label; btn.onclick=()=>{ state.currentSmartFilter=b.key; dom.smartGroups.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter===b.key)); updateFilters(); }; f.appendChild(btn); });
+                dom.smartGroups.appendChild(f);
+            };
+
+            const loadDataFromTab2 = () => {
+                if (!dom.zoneNameInput) return; 
+                const t2 = window.appState['2']; 
+                dom.zoneNameInput.value=''; 
+                state.currentSmartFilter='all'; 
+                dom.statusMsg?.classList.add('hidden');
+                
+                if (!t2?.rows?.length) { 
+                    state.rawData=[]; 
+                    if(dom.govContainer) dom.govContainer.innerHTML=''; 
+                    if(dom.contractorContainer) dom.contractorContainer.innerHTML=''; 
+                    if(dom.statusContainer) dom.statusContainer.innerHTML=''; 
+                    updateFilters(); 
+                    if(dom.previewBody) dom.previewBody.innerHTML='<tr><td colspan="100%" class="text-center py-12 text-slate-400 text-xs">يرجى تحميل ملف "Pending Installs" أولاً</td></tr>'; 
+                    return; 
                 }
-                return '';
-            }
+                state.rawData = t2.rows.map(r => { let o={}; t2.headers.forEach((h,i)=>o[h]=r[i]); return o; });
+                initGovs(); 
+                updateFilters();
+            };
 
-            function getZoneValue(row) {
-                return getValCaseInsensitive(row, ['zone name', 'zone']).toString().toUpperCase();
-            }
+            const initGovs = () => {
+                const govs = [...new Set(state.rawData.map(r=>getZone(r).substring(0,3)))].filter(c=>config.govMap[c]).sort();
+                buildCbs(dom.govContainer, 'gov', govs, updateCons);
+                if (dom.govContainer) dom.govContainer.querySelectorAll('input').forEach((cb,i)=>cb.nextElementSibling.textContent=`${config.govMap[govs[i]]} (${govs[i]})`);
+                updateCons();
+            };
 
-            function getCheckedValues(name) {
-                return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(cb => cb.value);
-            }
+            const filterRows = (rs, gs, cs, ss, zq) => rs.filter(r => {
+                const z=getZone(r), zn=parseInt(z.match(/\d+/)?.[0]||'-1',10), c=getVal(r,['zone contractor','contractor','contractor name']), s=getVal(r,['status']);
+                let sm = true; if(gs.length===1&&gs[0]==='FTK'&&state.currentSmartFilter!=='all') { const sc=config.smartZones[state.currentSmartFilter]||{ranges:[],specials:[]}; sm=sc.ranges.some(x=>zn>=x[0]&&zn<=x[1])||sc.specials.includes(zn); }
+                return (!gs.length||gs.some(g=>z.startsWith(g))) && (!cs.length||cs.includes(c)) && (!ss.length||ss.includes(s)) && (!zq||z.toLowerCase().includes(zq)) && sm;
+            });
 
-            function toggleAllCheckboxes(containerId, name) {
-                const container = document.getElementById(containerId);
-                const checkboxes = container.querySelectorAll(`input[name="${name}"]`);
-                if (checkboxes.length === 0) return;
+            const updateCons = () => {
+                const gs = getChecked('gov'); dom.smartGroupContainer?.classList.toggle('hidden', gs.length!==1||gs[0]!=='FTK');
+                if(gs.length!==1||gs[0]!=='FTK') { state.currentSmartFilter='all'; dom.smartGroups?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.filter==='all')); }
+                const pc = getChecked('contractor'); buildCbs(dom.contractorContainer, 'contractor', [...new Set(filterRows(state.rawData,gs,[],[],'').map(r=>getVal(r,['zone contractor','contractor','contractor name'])))].sort(), updateStats);
+                dom.contractorContainer?.querySelectorAll('input').forEach(cb=>{if(pc.includes(cb.value)) cb.checked=true;}); updateStats();
+            };
 
-                const isAllChecked = Array.from(checkboxes).every(cb => cb.checked);
-                checkboxes.forEach(cb => cb.checked = !isAllChecked);
+            const updateStats = () => {
+                const ps = getChecked('status'); buildCbs(dom.statusContainer, 'status', [...new Set(filterRows(state.rawData,getChecked('gov'),getChecked('contractor'),[],'').map(r=>getVal(r,['status'])))].sort(), updateFilters);
+                dom.statusContainer?.querySelectorAll('input').forEach(cb=>{if(ps.includes(cb.value)) cb.checked=true;}); updateFilters();
+            };
 
-                if (name === 'gov') updateContractorOptions();
-                else if (name === 'contractor') updateStatusOptions();
-                else if (name === 'status') updateGlobalFilters();
-            }
+            const updateFilters = () => {
+                const gs=getChecked('gov'), cs=getChecked('contractor'), ss=getChecked('status');
+                if(dom.govCount) dom.govCount.innerText=gs.length; 
+                if(dom.contractorCount) dom.contractorCount.innerText=cs.length; 
+                if(dom.statusCount) dom.statusCount.innerText=ss.length;
+                state.filteredData = filterRows(state.rawData, gs, cs, ss, dom.zoneNameInput?.value.trim().toLowerCase()); state.currentPage=1; render();
+                if(gs.length===1&&gs[0]==='FTK'&&state.currentSmartFilter!=='all' && dom.smartNote) { dom.smartNote.innerText=`سيُضاف المنطقة الذكية "${config.smartButtons.find(b=>b.key===state.currentSmartFilter)?.label}" للملف`; dom.smartNote.classList.remove('hidden'); } else dom.smartNote?.classList.add('hidden');
+            };
 
-            function buildCheckboxes(container, name, values, onChange) {
-                container.innerHTML = '';
-                const fragment = document.createDocumentFragment();
-                values.forEach((value) => {
-                    const label = document.createElement('label'); label.className = 'checkbox-item';
-                    const input = document.createElement('input'); input.type = 'checkbox'; input.name = name; input.value = value;
-                    const span = document.createElement('span'); span.className = 'mr-2 text-sm'; span.textContent = value;
-                    label.appendChild(input); label.appendChild(span); fragment.appendChild(label);
-                    input.addEventListener('change', onChange);
-                });
-                container.appendChild(fragment);
-            }
+            const render = () => {
+                if(dom.count) dom.count.innerText = state.filteredData.length; const sc={}; state.filteredData.forEach(r=>{ const v=getVal(r,['status'])||'بدون'; sc[v]=(sc[v]||0)+1; });
+                if(dom.sBreak) { if(state.filteredData.length) { dom.sBreak.innerHTML=Object.entries(sc).map(([k,v])=>`${k}: <span class="text-blue-600">${v}</span>`).join(' | '); dom.sBreak.classList.remove('hidden'); } else dom.sBreak.classList.add('hidden'); }
+                const tp = Math.max(1, Math.ceil(state.filteredData.length/config.rowsPerPage)); 
+                if(dom.tPages) dom.tPages.innerText=tp; 
+                if(dom.cPage) dom.cPage.innerText=state.currentPage; 
+                if(dom.pBtn) dom.pBtn.disabled=state.currentPage===1; 
+                if(dom.nBtn) dom.nBtn.disabled=state.currentPage===tp;
+                if(dom.pHead) dom.pHead.innerHTML=''; 
+                if(dom.pBody) dom.pBody.innerHTML='';
+                if(!state.filteredData.length) { if(dom.pBody) dom.pBody.innerHTML='<tr><td colspan="100%" class="text-center py-12 text-slate-400 text-xs">لا توجد بيانات</td></tr>'; return; }
+                const vks = Object.keys(state.filteredData[0]).filter(k=>!config.alwaysDeleteColumns.includes(k));
+                if(dom.pHead) dom.pHead.innerHTML=`<tr>${vks.map(k=>`<th>${k}</th>`).join('')}</tr>`;
+                state.filteredData.slice((state.currentPage-1)*config.rowsPerPage, state.currentPage*config.rowsPerPage).forEach(r => { if(dom.pBody) dom.pBody.innerHTML+=`<tr>${vks.map(k=>`<td>${r[k]||''}</td>`).join('')}</tr>`; });
+            };
 
-            function initSmartButtons() {
-                dom.smartGroups.innerHTML = '';
-                const fragment = document.createDocumentFragment();
-                config.smartButtons.forEach(({ key, label }) => {
-                    const button = document.createElement('button'); button.type = 'button';
-                    button.className = `group-btn ${key === 'all' ? 'active' : ''}`; button.dataset.filter = key; button.textContent = label;
-                    button.addEventListener('click', () => {
-                        state.currentSmartFilter = button.dataset.filter;
-                        dom.smartGroups.querySelectorAll('.group-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === state.currentSmartFilter));
-                        updateGlobalFilters(); updateSmartNote();
-                    });
-                    fragment.appendChild(button);
-                });
-                dom.smartGroups.appendChild(fragment);
-            }
-
-            function loadDataFromTab2() {
-                const tab2State = window.appState['2'];
-                dom.zoneNameInput.value = '';
-                state.currentSmartFilter = 'all';
-                dom.statusMsg.classList.add('hidden');
-
-                if (!tab2State || !tab2State.rows || tab2State.rows.length === 0) {
-                    state.rawData = [];
-                    dom.govContainer.innerHTML = '';
-                    dom.contractorContainer.innerHTML = '';
-                    dom.statusContainer.innerHTML = '';
-                    updateGlobalFilters();
-                    dom.previewBody.innerHTML = '<tr><td colspan="100%" class="text-center py-16 text-slate-400 font-medium">يرجى تحميل ملف "Pending Installs" (التبويب الثاني) لظهور البيانات</td></tr>';
-                    return;
-                }
-
-                const headers = tab2State.headers;
-                state.rawData = tab2State.rows.map(rowArr => {
-                    let obj = {};
-                    headers.forEach((h, i) => obj[h] = rowArr[i]);
-                    return obj;
-                });
-
-                initGovs();
-                updateGlobalFilters();
-            }
-
-            function initGovs() {
-                const availableGovs = [...new Set(state.rawData.map(r => getZoneValue(r).substring(0, 3)))].filter(code => config.govMap[code]).sort();
-                const displayValues = availableGovs.map(code => `${config.govMap[code]} (${code})`);
-                buildCheckboxes(dom.govContainer, 'gov', availableGovs, updateContractorOptions);
-                const checkboxes = dom.govContainer.querySelectorAll('input');
-                checkboxes.forEach((cb, i) => cb.nextElementSibling.textContent = displayValues[i]);
-                updateContractorOptions();
-            }
-
-            function filterBySelections(rows, selectedGovs, selectedCons, selectedStats, zoneQuery) {
-                return rows.filter((row) => {
-                    const zoneStr = getZoneValue(row);
-                    const zoneNum = parseInt(zoneStr.match(/\d+/)?.[0] || '-1', 10);
-                    const contractor = getValCaseInsensitive(row, ['zone contractor', 'contractor', 'contractor name']).toString();
-                    const status = getValCaseInsensitive(row, ['status']).toString();
-
-                    const matchesGov = selectedGovs.length === 0 || selectedGovs.some(g => zoneStr.startsWith(g));
-                    const matchesCon = selectedCons.length === 0 || selectedCons.includes(contractor);
-                    const matchesStat = selectedStats.length === 0 || selectedStats.includes(status);
-                    const matchesManual = !zoneQuery || zoneStr.toLowerCase().includes(zoneQuery);
-
-                    let matchesSmart = true;
-                    if (selectedGovs.length === 1 && selectedGovs[0] === 'FTK' && state.currentSmartFilter !== 'all') {
-                        const smartConfig = config.smartZones[state.currentSmartFilter] || { ranges: [], specials: [] };
-                        matchesSmart = smartConfig.ranges.some(r => zoneNum >= r[0] && zoneNum <= r[1]) || smartConfig.specials.includes(zoneNum);
-                    }
-                    return matchesGov && matchesCon && matchesStat && matchesManual && matchesSmart;
-                });
-            }
-
-            function updateContractorOptions() {
-                const selectedGovs = getCheckedValues('gov');
-                if (selectedGovs.length === 1 && selectedGovs[0] === 'FTK') {
-                    dom.smartGroupContainer.classList.remove('hidden');
-                } else {
-                    dom.smartGroupContainer.classList.add('hidden');
-                    state.currentSmartFilter = 'all';
-                    dom.smartGroups.querySelectorAll('.group-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === 'all'));
-                }
-                updateSmartNote();
-
-                const allGovs = dom.govContainer.querySelectorAll('input').length;
-                dom.btnSelectAllGov.textContent = (selectedGovs.length === allGovs && allGovs > 0) ? 'إلغاء الكل' : 'تحديد الكل';
-
-                const subset = filterBySelections(state.rawData, selectedGovs, [], [], '');
-                const contractors = [...new Set(subset.map(r => getValCaseInsensitive(r, ['zone contractor', 'contractor', 'contractor name']).toString()).filter(Boolean))].sort();
-                const prevSelectedCons = getCheckedValues('contractor');
-                buildCheckboxes(dom.contractorContainer, 'contractor', contractors, updateStatusOptions);
-                dom.contractorContainer.querySelectorAll('input').forEach(cb => { if(prevSelectedCons.includes(cb.value)) cb.checked = true; });
-                updateStatusOptions();
-            }
-
-            function updateStatusOptions() {
-                const selectedGovs = getCheckedValues('gov');
-                const selectedCons = getCheckedValues('contractor');
-                const allCons = dom.contractorContainer.querySelectorAll('input').length;
-                dom.btnSelectAllCon.textContent = (selectedCons.length === allCons && allCons > 0) ? 'إلغاء الكل' : 'تحديد الكل';
-
-                const subset = filterBySelections(state.rawData, selectedGovs, selectedCons, [], '');
-                const statuses = [...new Set(subset.map(r => getValCaseInsensitive(r, ['status']).toString()).filter(Boolean))].sort();
-                const prevSelectedStats = getCheckedValues('status');
-                buildCheckboxes(dom.statusContainer, 'status', statuses, updateGlobalFilters);
-                dom.statusContainer.querySelectorAll('input').forEach(cb => { if(prevSelectedStats.includes(cb.value)) cb.checked = true; });
-                updateGlobalFilters();
-            }
-
-            function updateGlobalFilters() {
-                const selectedGovs = getCheckedValues('gov');
-                const selectedCons = getCheckedValues('contractor');
-                const selectedStats = getCheckedValues('status');
-                const zoneQuery = dom.zoneNameInput.value.trim().toLowerCase();
-
-                dom.govCount.innerText = selectedGovs.length;
-                dom.contractorCount.innerText = selectedCons.length;
-                dom.statusCount.innerText = selectedStats.length;
-
-                const allStats = dom.statusContainer.querySelectorAll('input').length;
-                dom.btnSelectAllStat.textContent = (selectedStats.length === allStats && allStats > 0) ? 'إلغاء الكل' : 'تحديد الكل';
-
-                state.filteredData = filterBySelections(state.rawData, selectedGovs, selectedCons, selectedStats, zoneQuery);
-                state.currentPage = 1;
-                renderPreview();
-                updateSmartNote();
-            }
-
-            function renderPreview() {
-                dom.countNumber.innerText = state.filteredData.length;
-                const statusCounts = {};
-                state.filteredData.forEach(row => {
-                    const statusVal = (getValCaseInsensitive(row, ['status']) || 'غير محدد').toString();
-                    statusCounts[statusVal] = (statusCounts[statusVal] || 0) + 1;
-                });
-
-                if (state.filteredData.length > 0) {
-                    const breakdownText = Object.entries(statusCounts).map(([statusName, count]) => `${statusName}: <span class="text-blue-700 font-bold ml-1">${count}</span>`).join(' <span class="text-slate-300 mx-2">|</span> ');
-                    dom.statusBreakdown.innerHTML = breakdownText;
-                    dom.statusBreakdown.classList.remove('hidden');
-                } else {
-                    dom.statusBreakdown.classList.add('hidden');
-                }
-
-                const totalPages = Math.max(1, Math.ceil(state.filteredData.length / config.rowsPerPage));
-                dom.totalPagesNum.innerText = totalPages;
-                dom.currentPageNum.innerText = state.currentPage;
-                dom.prevPage.disabled = state.currentPage === 1;
-                dom.nextPage.disabled = state.currentPage === totalPages;
-
-                dom.previewHead.innerHTML = '';
-                dom.previewBody.innerHTML = '';
-
-                if (!state.filteredData.length) {
-                    const emptyRow = document.createElement('tr');
-                    const emptyCell = document.createElement('td');
-                    emptyCell.colSpan = 100; emptyCell.className = 'text-center py-16 text-slate-400 font-medium';
-                    emptyCell.textContent = state.rawData.length > 0 ? 'لا توجد بيانات تطابق الفلاتر' : 'يرجى تحميل ملف "Pending Installs" أولاً لظهور البيانات';
-                    emptyRow.appendChild(emptyCell); dom.previewBody.appendChild(emptyRow);
-                    return;
-                }
-
-                const visibleKeys = Object.keys(state.filteredData[0]).filter(k => !config.alwaysDeleteColumns.includes(k));
-                const headerRow = document.createElement('tr');
-                visibleKeys.forEach(key => { const th = document.createElement('th'); th.textContent = key; headerRow.appendChild(th); });
-                dom.previewHead.appendChild(headerRow);
-
-                const start = (state.currentPage - 1) * config.rowsPerPage;
-                const end = state.currentPage * config.rowsPerPage;
-                state.filteredData.slice(start, end).forEach((row) => {
-                    const tr = document.createElement('tr');
-                    visibleKeys.forEach(key => { const td = document.createElement('td'); td.textContent = String(row[key] ?? ''); tr.appendChild(td); });
-                    dom.previewBody.appendChild(tr);
-                });
-            }
-
-            function changePage(direction) {
-                const totalPages = Math.max(1, Math.ceil(state.filteredData.length / config.rowsPerPage));
-                state.currentPage = Math.min(totalPages, Math.max(1, state.currentPage + direction));
-                renderPreview();
-            }
-
-            function sanitizeFilename(value) { return (value || 'NA').toString().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_'); }
-            function escapeExcelValue(value) {
-                if (typeof value !== 'string') return value;
-                if (/^[=+\-@]/.test(value)) return `'${value}`;
-                return value;
-            }
-
-            function getSelectedSmartLabel() {
-                if (state.currentSmartFilter === 'all') return '';
-                const button = config.smartButtons.find(item => item.key === state.currentSmartFilter);
-                return button ? button.label : state.currentSmartFilter;
-            }
-
-            function updateSmartNote() {
-                const selectedGovs = getCheckedValues('gov');
-                if (selectedGovs.length === 1 && selectedGovs[0] === 'FTK' && state.currentSmartFilter !== 'all') {
-                    dom.smartSelectionNote.innerText = `سيُضاف إلى اسم الملف: المنطقة الذكية "${getSelectedSmartLabel()}".`;
-                    dom.smartSelectionNote.classList.remove('hidden');
-                } else {
-                    dom.smartSelectionNote.innerText = '';
-                    dom.smartSelectionNote.classList.add('hidden');
-                }
-            }
-
-            function exportExcel(data, fileName, status) {
-                const statusText = (status || '').toString().toLowerCase();
-                const isPendingOnly = statusText.includes('pending') && !statusText.includes('done');
-                const processed = data.map((row) => {
-                    const next = { ...row };
-                    config.alwaysDeleteColumns.forEach(c => delete next[c]);
-                    if (isPendingOnly) config.pendingOnlyDeleteColumns.forEach(c => delete next[c]);
-                    Object.keys(next).forEach(key => {
-                        if (typeof next[key] === 'string') {
-                            next[key] = escapeExcelValue(next[key].replace(/\s\s+/g, ' ').trim());
+            const exportXLSX = (d, fn, st) => {
+                const po = st.toLowerCase().includes('pending') && !st.toLowerCase().includes('done');
+                const pd = d.map(r=>{ 
+                    const n={...r}; 
+                    config.alwaysDeleteColumns.forEach(c=>delete n[c]); 
+                    if(po) config.pendingOnlyDeleteColumns.forEach(c=>delete n[c]); 
+                    Object.keys(n).forEach(k=>{ 
+                        if(typeof n[k]==='string'){ 
+                            n[k]=n[k].replace(/\s+/g,' ').trim(); 
+                            if(/^[=+\-@]/.test(n[k])) n[k]=`'${n[k]}`; 
+                        } 
+                    }); 
+                    if(n.CreatedOn){
+                        const d=new Date(n.CreatedOn); 
+                        if(!isNaN(d)) {
+                            const yyyy = d.getFullYear();
+                            const mm = String(d.getMonth() + 1).padStart(2, '0');
+                            const dd = String(d.getDate()).padStart(2, '0');
+                            n.CreatedOn=`${yyyy}-${mm}-${dd}`;
                         }
-                    });
-                    if (next.CreatedOn) {
-                        const created = new Date(next.CreatedOn);
-                        if (!Number.isNaN(created.getTime())) next.CreatedOn = escapeExcelValue(`${created.getFullYear()}/${created.getMonth() + 1}/${created.getDate()}`);
-                    }
-                    return next;
+                    } 
+                    return n; 
                 });
-                const ws = XLSX.utils.json_to_sheet(processed);
-                if (processed.length > 0) {
-                    const colWidths = Object.keys(processed[0]).map(key => ({
-                        wch: processed.reduce((max, r) => Math.max(max, r[key] ? r[key].toString().length : 0), key.length) + 1
-                    }));
-                    ws['!cols'] = colWidths;
-                }
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, config.defaultSheetName);
-                XLSX.writeFile(wb, `${fileName}.xlsx`);
-            }
+                const ws = XLSX.utils.json_to_sheet(pd); 
+                if(pd.length) ws['!cols']=Object.keys(pd[0]).map(k=>({wch:Math.max(k.length, ...pd.map(r=>(r[k]?r[k].toString().length:0)))+1}));
+                const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,config.defaultSheetName); XLSX.writeFile(wb, `${fn}.xlsx`);
+            };
 
-            function handleSingleExport() {
-                if (!state.filteredData.length) return window.showToast('لا توجد بيانات للتصدير');
-                const originalBtnText = dom.exportSingleBtn.innerText;
-                dom.exportSingleBtn.innerText = 'جاري المعالجة...'; dom.exportSingleBtn.disabled = true; dom.exportSingleBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            const handleExp = (single) => {
+                if(!state.filteredData.length) return window.showToast('لا توجد بيانات');
+                const b = single ? dom.sExpBtn : dom.mExpBtn; const ob = b.innerText; b.innerText='جاري...'; b.disabled=true;
+                setTimeout(()=>{
+                    if(single) { exportXLSX(state.filteredData, `AllData_${new Date().toISOString().split('T')[0]}`, getChecked('status').length===1?getChecked('status')[0]:'mixed'); window.showToast('تم التحميل'); }
+                    else {
+                        let c=0; const gs=getChecked('gov').length?getChecked('gov'):['All']; const cs=getChecked('contractor').length?getChecked('contractor'):['All']; const ss=getChecked('status');
+                        gs.forEach(g=>cs.forEach(con=>{
+                            const sub=state.filteredData.filter(r=>{ const z=getZone(r), rc=getVal(r,['zone contractor','contractor','contractor name']), st=getVal(r,['status']); return (g==='All'||z.startsWith(g))&&(con==='All'||rc===con)&&(!ss.length||ss.includes(st)); });
+                            if(sub.length){ exportXLSX(sub, [config.govMap[g]||g, g==='FTK'&&state.currentSmartFilter!=='all'?config.smartButtons.find(x=>x.key===state.currentSmartFilter)?.label:'', con, ss.length?ss.join('-'):'All', new Date().toISOString().split('T')[0]].filter(Boolean).map(x=>x.replace(/[\\/:*?"<>|]/g,'_')).join('_'), ss.join(' ')); c++; }
+                        }));
+                        window.showToast(`تم تحميل ${c} ملفات`);
+                    }
+                    b.innerText=ob; b.disabled=false;
+                }, 50);
+            };
 
-                setTimeout(() => {
-                    const filename = sanitizeFilename(`All_Filtered_Data_${new Date().toISOString().split('T')[0]}`);
-                    const selectedStats = getCheckedValues('status');
-                    const statusForExport = (selectedStats.length === 1 && selectedStats[0].toLowerCase().includes('pending')) ? 'pending' : 'mixed';
-                    exportExcel(state.filteredData, filename, statusForExport);
-                    showStatus('تم تنزيل الملف الشامل بنجاح', 'bg-green-100 text-green-700');
-                    dom.exportSingleBtn.innerText = originalBtnText; dom.exportSingleBtn.disabled = false; dom.exportSingleBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                }, 100);
-            }
-
-            function handleExport() {
-                if (!state.filteredData.length) return window.showToast('لا توجد بيانات للتصدير');
-                const originalBtnText = dom.convertBtn.innerText;
-                dom.convertBtn.innerText = 'جاري التجهيز والتحميل...'; dom.convertBtn.disabled = true; dom.convertBtn.classList.add('opacity-70', 'cursor-not-allowed');
-
-                setTimeout(() => {
-                    const selectedGovs = getCheckedValues('gov'); const selectedCons = getCheckedValues('contractor'); const selectedStats = getCheckedValues('status');
-                    const govsToLoop = selectedGovs.length ? selectedGovs : ['AllGovs'];
-                    const consToLoop = selectedCons.length ? selectedCons : ['AllContractors'];
-                    const combinedStatusStr = selectedStats.length > 0 ? (selectedStats.length > 3 ? `${selectedStats.length}-Statuses` : selectedStats.join('-')) : 'AllStatus';
-
-                    let fileCount = 0;
-                    govsToLoop.forEach(gov => {
-                        consToLoop.forEach(contractor => {
-                            const subset = state.filteredData.filter(row => {
-                                const zone = getZoneValue(row);
-                                const rowContractor = getValCaseInsensitive(row, ['zone contractor', 'contractor', 'contractor name']).toString();
-                                const rowStatus = getValCaseInsensitive(row, ['status']).toString();
-                                return (gov === 'AllGovs' || zone.startsWith(gov)) && (contractor === 'AllContractors' || rowContractor === contractor) && (selectedStats.length === 0 || selectedStats.includes(rowStatus));
-                            });
-                            if (!subset.length) return;
-                            const smartLabel = gov === 'FTK' && state.currentSmartFilter !== 'all' ? getSelectedSmartLabel() : '';
-                            const filename = [config.govMap[gov] || gov, smartLabel, contractor, combinedStatusStr, new Date().toISOString().split('T')[0]].filter(Boolean).map(sanitizeFilename).join('_');
-                            exportExcel(subset, filename, selectedStats.join(' '));
-                            fileCount++;
-                        });
-                    });
-                    showStatus(`تم تنزيل ${fileCount} ملفات مقسمة بنجاح`, 'bg-blue-100 text-blue-700');
-                    dom.convertBtn.innerText = originalBtnText; dom.convertBtn.disabled = false; dom.convertBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                }, 100);
-            }
-
-            function showStatus(message, classes) {
-                dom.statusMsg.innerText = message;
-                dom.statusMsg.className = `mt-6 p-4 text-center text-sm font-bold rounded-2xl ${classes}`;
-                dom.statusMsg.classList.remove('hidden');
-            }
-
-            function init() {
-                dom = {
-                    configSection: document.getElementById('configSection'), govContainer: document.getElementById('govContainer'),
-                    contractorContainer: document.getElementById('contractorContainer'), statusContainer: document.getElementById('statusContainer'),
-                    smartGroupContainer: document.getElementById('smartGroupContainer'), smartGroups: document.getElementById('smartGroups'),
-                    zoneNameInput: document.getElementById('zoneNameFilter'), smartSelectionNote: document.getElementById('smartSelectionNote'),
-                    convertBtn: document.getElementById('convertBtn'), exportSingleBtn: document.getElementById('exportSingleBtn'),
-                    previewBody: document.getElementById('previewBody'), previewHead: document.getElementById('previewHead'),
-                    countNumber: document.getElementById('countNumber'), statusBreakdown: document.getElementById('statusBreakdown'),
-                    statusMsg: document.getElementById('statusMsg'), govCount: document.getElementById('govCount'),
-                    contractorCount: document.getElementById('contractorCount'), statusCount: document.getElementById('statusCount'),
-                    totalPagesNum: document.getElementById('totalPagesNum'), currentPageNum: document.getElementById('currentPageNum'),
-                    prevPage: document.getElementById('prevPage'), nextPage: document.getElementById('nextPage'),
-                    btnSelectAllGov: document.getElementById('btnSelectAllGov'), btnSelectAllCon: document.getElementById('btnSelectAllCon'),
-                    btnSelectAllStat: document.getElementById('btnSelectAllStat')
-                };
-
-                dom.zoneNameInput.addEventListener('input', debounce(updateGlobalFilters, 300));
-                dom.convertBtn.addEventListener('click', handleExport);
-                dom.exportSingleBtn.addEventListener('click', handleSingleExport);
-                dom.prevPage.addEventListener('click', () => changePage(-1));
-                dom.nextPage.addEventListener('click', () => changePage(1));
-                dom.btnSelectAllGov.addEventListener('click', () => toggleAllCheckboxes('govContainer', 'gov'));
-                dom.btnSelectAllCon.addEventListener('click', () => toggleAllCheckboxes('contractorContainer', 'contractor'));
-                dom.btnSelectAllStat.addEventListener('click', () => toggleAllCheckboxes('statusContainer', 'status'));
-
-                initSmartButtons();
-            }
-
+            const init = () => {
+                dom = { configSection: document.getElementById('configSection'), govContainer: document.getElementById('govContainer'), contractorContainer: document.getElementById('contractorContainer'), statusContainer: document.getElementById('statusContainer'), smartGroupContainer: document.getElementById('smartGroupContainer'), smartGroups: document.getElementById('smartGroups'), zoneNameInput: document.getElementById('zoneNameFilter'), smartNote: document.getElementById('smartSelectionNote'), mExpBtn: document.getElementById('convertBtn'), sExpBtn: document.getElementById('exportSingleBtn'), pBody: document.getElementById('previewBody'), pHead: document.getElementById('previewHead'), count: document.getElementById('countNumber'), sBreak: document.getElementById('statusBreakdown'), govCount: document.getElementById('govCount'), contractorCount: document.getElementById('contractorCount'), statusCount: document.getElementById('statusCount'), tPages: document.getElementById('totalPagesNum'), cPage: document.getElementById('currentPageNum'), pBtn: document.getElementById('prevPage'), nBtn: document.getElementById('nextPage') };
+                if(dom.zoneNameInput) dom.zoneNameInput.addEventListener('input', debounce(updateFilters, 300)); 
+                if(dom.mExpBtn) dom.mExpBtn.onclick=()=>handleExp(false); 
+                if(dom.sExpBtn) dom.sExpBtn.onclick=()=>handleExp(true); 
+                if(dom.pBtn) dom.pBtn.onclick=()=>changePage(-1); 
+                if(dom.nBtn) dom.nBtn.onclick=()=>changePage(1); 
+                if(document.getElementById('btnSelectAllGov')) document.getElementById('btnSelectAllGov').onclick=()=>toggleAll('govContainer','gov'); 
+                if(document.getElementById('btnSelectAllCon')) document.getElementById('btnSelectAllCon').onclick=()=>toggleAll('contractorContainer','contractor'); 
+                if(document.getElementById('btnSelectAllStat')) document.getElementById('btnSelectAllStat').onclick=()=>toggleAll('statusContainer','status'); 
+                initSmarts();
+            };
             return { init, loadDataFromTab2 };
         })();
 
         // --- 9. MAIN INITIALIZATION ---
         Chart.register(ChartDataLabels);
         Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
-        Chart.defaults.font.size = 12;
+        Chart.defaults.font.size = 11;
 
-        window.addEventListener('load', () => {
-          window.ExportConverter.init();
-          window.switchTab('tab1');
+        window.ExportConverter.init();
+        requestAnimationFrame(() => {
+            window.switchTab('tab1');
         });
     </script>
 </body>
